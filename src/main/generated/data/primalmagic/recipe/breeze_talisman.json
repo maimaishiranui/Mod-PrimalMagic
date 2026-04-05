@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "group": "breeze_talisman",
+  "key": {
+    "E": {
+      "item": "primalmagic:elemental_mastermind"
+    },
+    "L": {
+      "item": "minecraft:lapis_block"
+    },
+    "Z": {
+      "item": "primalmagic:vastness_zephyr"
+    }
+  },
+  "pattern": [
+    "LZL",
+    "LEL",
+    "LEL"
+  ],
+  "result": {
+    "count": 1,
+    "id": "primalmagic:breeze_talisman"
+  }
+}

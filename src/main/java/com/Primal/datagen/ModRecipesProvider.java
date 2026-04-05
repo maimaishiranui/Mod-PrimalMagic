@@ -1,5 +1,6 @@
 package com.Primal.datagen;
 
+import com.Primal.block.ModBlocks;
 import com.Primal.item.ModItems;
 import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricRecipeProvider;
@@ -81,7 +82,7 @@ public class ModRecipesProvider extends FabricRecipeProvider {
                 .pattern("RES")
                 .pattern("III")
                 .input('B', Items.BOOK)
-                .input('M', ModItems.MAGIC_INTRODUCTION) // 自引用配方（需确认合理性）
+                .input('M', Items.WRITTEN_BOOK) // 自引用配方（需确认合理性）
                 .input('R', ModItems.REFINING_STONE)
                 .input('E', Items.END_CRYSTAL)
                 .input('S', Items.SPECTRAL_ARROW) // 原 JSON 中 "spiritual_medium_stone" 可能为笔误，此处修正为原版物品
@@ -113,6 +114,18 @@ public class ModRecipesProvider extends FabricRecipeProvider {
                 .group("flame_talisman")
                 .criterion(hasItem(ModItems.VASTNESS_EMBER), conditionsFromItem(ModItems.VASTNESS_EMBER))
                 .offerTo(exporter);
+
+
+        ShapedRecipeJsonBuilder.create(RecipeCategory.DECORATIONS, ModBlocks.MAGIC_BINDING_TABLE)
+                .pattern("SSS")
+                .pattern("S#S")
+                .pattern("SSS")
+                .input('S', Items.STONE)               // 暂时用石头，你可以改成你想要的材料
+                .input('#', ModItems.REFINING_STONE)    // 使用你的洗练石作为核心
+                .criterion(hasItem(ModItems.REFINING_STONE), conditionsFromItem(ModItems.REFINING_STONE))
+                .offerTo(exporter);
+
+
 
         //有序合成的配方模板
         /*

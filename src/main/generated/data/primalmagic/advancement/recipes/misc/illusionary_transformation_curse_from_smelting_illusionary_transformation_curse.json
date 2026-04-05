@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_illusionary_transformation_curse": {
+      "conditions": {
+        "items": [
+          {
+            "items": "primalmagic:illusionary_transformation_curse"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "minecraft:illusionary_transformation_curse_from_smelting_illusionary_transformation_curse"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_illusionary_transformation_curse"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "minecraft:illusionary_transformation_curse_from_smelting_illusionary_transformation_curse"
+    ]
+  }
+}

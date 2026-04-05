@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "primalmagic:block/refining_stone_block"
+  }
+}

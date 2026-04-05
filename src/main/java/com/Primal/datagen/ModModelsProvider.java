@@ -14,12 +14,14 @@ public class ModModelsProvider extends FabricModelProvider {
 
     @Override
     public void generateBlockStateModels(BlockStateModelGenerator generator) {
-        // 六面相同
+        // --- 1. 基础方块（六面相同） ---
+        // 每个方块只能在这里出现【一次】
         generator.registerSimpleCubeAll(ModBlocks.REFINING_STONE_BLOCK);
         generator.registerSimpleCubeAll(ModBlocks.ILLUSIONARY_BLOCK);
         generator.registerSimpleCubeAll(ModBlocks.SPIRITUAL_MEDIUM_STONE_BLOCK);
 
-        // 六面不同
+
+        // --- 2. 魔法绑定台（自定义多面贴图） ---
         TextureMap textures = new TextureMap()
                 .put(TextureKey.SIDE, Identifier.of("primalmagic", "block/magic_binding_table_side"))
                 .put(TextureKey.FRONT, Identifier.of("primalmagic", "block/magic_binding_table_front"))
@@ -28,8 +30,13 @@ public class ModModelsProvider extends FabricModelProvider {
                 .put(TextureKey.DOWN, Identifier.of("minecraft", "block/diamond_block"))
                 .put(TextureKey.PARTICLE, Identifier.of("primalmagic", "block/magic_binding_table_front"));
 
-        Models.CUBE.upload(ModBlocks.MAGIC_BINDING_TABLE, textures, generator.modelCollector);
+        Identifier modelId = Models.CUBE.upload(ModBlocks.MAGIC_BINDING_TABLE, textures, generator.modelCollector);
+        generator.blockStateCollector.accept(BlockStateModelGenerator.createSingletonBlockState(ModBlocks.MAGIC_BINDING_TABLE, modelId));
+
+        // 确保绑定台在物品栏里也不是黑紫格子
+        generator.registerParentedItemModel(ModBlocks.MAGIC_BINDING_TABLE, modelId);
     }
+
 
     @Override
     public void generateItemModels(ItemModelGenerator itemModelGenerator) {
@@ -56,5 +63,7 @@ public class ModModelsProvider extends FabricModelProvider {
         itemModelGenerator.register(ModItems.SOUL_OF_MINGYUAN, Models.GENERATED);
         itemModelGenerator.register(ModItems.SPIRITUAL_MEDIUM_STONE, Models.GENERATED);
         itemModelGenerator.register(ModItems.ILLUSIONARY_TRANSFORMATION_CURSE, Models.GENERATED);
+        itemModelGenerator.register(ModItems.MAGIC_INTRODUCTION, Models.GENERATED);
+        itemModelGenerator.register(ModItems.ADVANCED_MAGIC_INTRODUCTION, Models.GENERATED);
     }
 }

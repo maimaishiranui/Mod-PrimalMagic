@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:blasting",
+  "category": "misc",
+  "cookingtime": 150,
+  "experience": 10.0,
+  "group": "ic_from_blasting_ib",
+  "ingredient": {
+    "item": "primalmagic:illusionary_transformation_curse"
+  },
+  "result": {
+    "id": "primalmagic:illusionary_transformation_curse"
+  }
+}

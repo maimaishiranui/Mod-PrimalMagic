@@ -3,6 +3,7 @@ package com.Primal.block;
 import com.Primal.PrimalMagic;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
+import net.minecraft.block.MapColor;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraft.registry.Registries;
@@ -18,7 +19,8 @@ public class ModBlocks {
     public static final Block ILLUSIONARY_BLOCK = register("illusionary_block",new Block(AbstractBlock.Settings.create().requiresTool().strength(66.0f,45.5f)));
 
 
-    public static final Block MAGIC_BINDING_TABLE = register("magic_binding_table",new Block(AbstractBlock.Settings.create().requiresTool().strength(2.5f,2.5f)));
+    public static final Block MAGIC_BINDING_TABLE = register("magic_binding_table",
+            new MagicBindingTableBlock(AbstractBlock.Settings.create().mapColor(MapColor.BLACK).requiresTool().strength(2.5f, 2.5f).nonOpaque()));
 
 
     public static  void registerBlockItem(String id,Block block){

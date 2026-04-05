@@ -1,0 +1,4 @@
+// 1.21	2026-04-05T00:16:19.5210072	primalmagic/Tags for minecraft:block
+f191066bbd873fd572363cc837c0a5bc64c52284 data\minecraft\tags\block\needs_iron_tool.json
+9fdaec2b47999b7399795e8b8cd26606ed94968d data\minecraft\tags\block\mineable\pickaxe.json
+1b08229da1a687ffe7eb4caccd7ec1417dac833c data\minecraft\tags\block\needs_stone_tool.json

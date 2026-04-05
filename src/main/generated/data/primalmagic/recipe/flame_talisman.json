@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "group": "flame_talisman",
+  "key": {
+    "E": {
+      "item": "primalmagic:elemental_mastermind"
+    },
+    "L": {
+      "item": "minecraft:lapis_block"
+    },
+    "M": {
+      "item": "primalmagic:vastness_ember"
+    }
+  },
+  "pattern": [
+    "LML",
+    "LEL",
+    "LEL"
+  ],
+  "result": {
+    "count": 1,
+    "id": "primalmagic:flame_talisman"
+  }
+}

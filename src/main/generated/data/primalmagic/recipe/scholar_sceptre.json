@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "group": "scholar_sceptre",
+  "key": {
+    "#": {
+      "item": "minecraft:stick"
+    },
+    "G": {
+      "item": "minecraft:gold_block"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "L": {
+      "item": "minecraft:string"
+    }
+  },
+  "pattern": [
+    "GI ",
+    "I#L",
+    " L#"
+  ],
+  "result": {
+    "count": 1,
+    "id": "primalmagic:scholar_sceptre"
+  }
+}

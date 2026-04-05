@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "down": "minecraft:block/diamond_block",
+    "east": "primalmagic:block/magic_binding_table_side",
+    "north": "primalmagic:block/magic_binding_table_side",
+    "particle": "primalmagic:block/magic_binding_table_front",
+    "south": "primalmagic:block/magic_binding_table_side",
+    "up": "primalmagic:block/magic_binding_table_top",
+    "west": "primalmagic:block/magic_binding_table_side"
+  }
+}

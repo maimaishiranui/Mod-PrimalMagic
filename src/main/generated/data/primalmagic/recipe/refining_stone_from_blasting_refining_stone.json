@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:blasting",
+  "category": "misc",
+  "cookingtime": 80,
+  "experience": 2.5,
+  "group": "rs_from_blasting_rsb",
+  "ingredient": {
+    "item": "primalmagic:refining_stone"
+  },
+  "result": {
+    "id": "primalmagic:refining_stone"
+  }
+}

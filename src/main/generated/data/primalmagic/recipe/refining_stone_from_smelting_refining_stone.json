@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:smelting",
+  "category": "misc",
+  "cookingtime": 150,
+  "experience": 2.0,
+  "group": "rs_from_smelting_rsb",
+  "ingredient": {
+    "item": "primalmagic:refining_stone"
+  },
+  "result": {
+    "id": "primalmagic:refining_stone"
+  }
+}

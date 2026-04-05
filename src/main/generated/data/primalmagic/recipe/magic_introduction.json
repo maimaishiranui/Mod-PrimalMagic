@@ -1,0 +1,34 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "group": "primalmagic:magic_introduction",
+  "key": {
+    "B": {
+      "item": "minecraft:book"
+    },
+    "E": {
+      "item": "minecraft:end_crystal"
+    },
+    "I": {
+      "item": "primalmagic:illusionary_transformation_curse"
+    },
+    "M": {
+      "item": "minecraft:written_book"
+    },
+    "R": {
+      "item": "primalmagic:refining_stone"
+    },
+    "S": {
+      "item": "minecraft:spectral_arrow"
+    }
+  },
+  "pattern": [
+    "BMB",
+    "RES",
+    "III"
+  ],
+  "result": {
+    "count": 1,
+    "id": "primalmagic:magic_introduction"
+  }
+}

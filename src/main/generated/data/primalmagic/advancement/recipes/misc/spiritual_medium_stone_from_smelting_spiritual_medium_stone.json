@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_spiritual_medium_stone": {
+      "conditions": {
+        "items": [
+          {
+            "items": "primalmagic:spiritual_medium_stone"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "minecraft:spiritual_medium_stone_from_smelting_spiritual_medium_stone"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_spiritual_medium_stone"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "minecraft:spiritual_medium_stone_from_smelting_spiritual_medium_stone"
+    ]
+  }
+}

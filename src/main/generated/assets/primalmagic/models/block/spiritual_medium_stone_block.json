@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "primalmagic:block/spiritual_medium_stone_block"
+  }
+}

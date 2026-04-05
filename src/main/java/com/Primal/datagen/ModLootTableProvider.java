@@ -22,7 +22,7 @@ import net.minecraft.registry.RegistryWrapper;
 import java.util.concurrent.CompletableFuture;
 
 public class ModLootTableProvider extends FabricBlockLootTableProvider {
-    protected ModLootTableProvider(FabricDataOutput dataOutput, CompletableFuture<RegistryWrapper.WrapperLookup> registryLookup) {
+    public ModLootTableProvider(FabricDataOutput dataOutput, CompletableFuture<RegistryWrapper.WrapperLookup> registryLookup) {
         super(dataOutput, registryLookup);
 
 
@@ -30,20 +30,23 @@ public class ModLootTableProvider extends FabricBlockLootTableProvider {
 
     @Override
     public void generate() {
+        // 1. 魔法绑定台：掉落自身（默认不受时运影响）
+        addDrop(ModBlocks.MAGIC_BINDING_TABLE);
 
-        //矿石类掉落物的数据生成
-            addDrop(ModBlocks.ILLUSIONARY_BLOCK,oreDrops(ModBlocks.ILLUSIONARY_BLOCK,
-                    ModItems.ILLUSIONARY_TRANSFORMATION_CURSE));
-            addDrop(ModBlocks.REFINING_STONE_BLOCK,oreDrops(ModBlocks.REFINING_STONE_BLOCK,
-                    ModItems.REFINING_STONE));
-            addDrop(ModBlocks.SPIRITUAL_MEDIUM_STONE_BLOCK,oreDrops(ModBlocks.SPIRITUAL_MEDIUM_STONE_BLOCK,
-                    ModItems.SPIRITUAL_MEDIUM_STONE));
+        // 2. 幻化方块、洗练石方块、灵媒石方块
+        // 需求：掉落特定物品，且固定掉落1个，不受时运（附魔）影响
 
-            //工作台类似的其他物品掉落物数据生成
-             addDrop(ModBlocks.MAGIC_BINDING_TABLE);
+        // 如果你【不想要】丝绸之触（即用丝触挖也只掉物品，不掉方块本身）：
+        addDrop(ModBlocks.ILLUSIONARY_BLOCK, drops(ModItems.ILLUSIONARY_TRANSFORMATION_CURSE));
+        addDrop(ModBlocks.REFINING_STONE_BLOCK, drops(ModItems.REFINING_STONE));
+        addDrop(ModBlocks.SPIRITUAL_MEDIUM_STONE_BLOCK, drops(ModItems.SPIRITUAL_MEDIUM_STONE));
+
+    /*
+       注意：如果你希望“丝绸之触”能挖出方块本身，但“普通挖掘”只掉1个且没时运加成，请使用：
+       addDrop(ModBlocks.REFINING_STONE_BLOCK, dropsWithSilkTouch(ModBlocks.REFINING_STONE_BLOCK, ItemEntry.builder(ModItems.REFINING_STONE)));
+    */
     }
-
-
+    
     public LootTable.Builder copperOreLinkDrops(Block drop, Item dropItem) {
         RegistryWrapper.Impl<Enchantment> impl = this.registryLookup.getWrapperOrThrow(RegistryKeys.ENCHANTMENT);
         return this.dropsWithSilkTouch(
