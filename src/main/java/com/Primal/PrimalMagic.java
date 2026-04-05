@@ -6,11 +6,17 @@ import com.Primal.component.ModDataComponentTypes;
 import com.Primal.datagen.ModPlacedFeatures;
 import com.Primal.item.ModItemGroup;
 import com.Primal.item.ModItems;
+import com.Primal.item.SceptreItem;
 import com.Primal.screen.ModScreenHandlers;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
+import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
+import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
+import net.minecraft.item.ItemStack;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
+import net.minecraft.util.ActionResult;
 import net.minecraft.world.gen.GenerationStep;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +40,26 @@ public class PrimalMagic implements ModInitializer {
 		ModBlockEntities.registerBlockEntities();
 		ModScreenHandlers.registerScreenHandlers();
 		ModDataComponentTypes.registerDataComponentTypes();
+
+		//监听方块和状态
+		AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {
+			ItemStack stack = player.getStackInHand(hand);
+			if (!world.isClient && stack.getItem() instanceof SceptreItem && stack.contains(ModDataComponentTypes.FLAME_BARRAGE_TICKS)) {
+				((SceptreItem)stack.getItem()).executeFlameSkill2((ServerWorld)world, player, stack);
+				return ActionResult.SUCCESS; // 拦截挖矿动作
+			}
+			return ActionResult.PASS;
+		});
+
+// 2. 监听左键点击空气/实体
+		AttackEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
+			ItemStack stack = player.getStackInHand(hand);
+			if (!world.isClient && stack.getItem() instanceof SceptreItem && stack.contains(ModDataComponentTypes.FLAME_BARRAGE_TICKS)) {
+				((SceptreItem)stack.getItem()).executeFlameSkill2((ServerWorld)world, player, stack);
+				return ActionResult.SUCCESS; // 拦截普通攻击动作
+			}
+			return ActionResult.PASS;
+		});
 
 		// 注入灵媒石
 		BiomeModifications.addFeature(BiomeSelectors.foundInOverworld(),
