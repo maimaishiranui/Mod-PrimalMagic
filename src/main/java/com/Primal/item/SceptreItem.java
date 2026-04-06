@@ -27,6 +27,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import net.minecraft.particle.BlockStateParticleEffect;
 
 import java.util.HashMap;
 import java.util.List;
@@ -168,6 +169,64 @@ public class SceptreItem extends Item {
                         user.setCurrentHand(hand);
                         user.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, 160, 2, false, false, true));
                         return TypedActionResult.consume(stack);
+                    }
+                }
+            }
+            // --- Thunderclap ---
+            else if ("Thunderclap".equals(talisman)) {
+                if (user.isSneaking()) {
+                    // 技能 2：雷霆万钧 (CD 35s)
+                    if (isSkillReady(stack, ModDataComponentTypes.SKILL_2_LAST_USE, currentTime, 700)) {
+                        executeThunderSlash(serverWorld, user, stack);
+                        stack.set(ModDataComponentTypes.SKILL_2_LAST_USE, currentTime);
+                        user.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, 100, 2, false, false, true));
+                        return TypedActionResult.success(stack);
+                    } else {
+                        sendCooldownMessage(user, "雷霆万钧 冷却中...");
+                    }
+                } else {
+                    // 技能 1：八方落雷 (CD 18s)
+                    if (isSkillReady(stack, ModDataComponentTypes.SKILL_1_LAST_USE, currentTime, 360)) {
+                        // 立即弹开周围 4 格敌人
+                        pushBackEntities(world, user, 4.0);
+                        // 开启 5 次落雷循环
+                        stack.set(ModDataComponentTypes.THUNDER_WAVE_TICKS, 5);
+                        stack.set(ModDataComponentTypes.THUNDER_KILL_COUNT, 0); // 重置技能1计数
+
+                        stack.set(ModDataComponentTypes.SKILL_1_LAST_USE, currentTime);
+                        user.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, 100, 2, false, false, true));
+                        return TypedActionResult.success(stack);
+                    } else {
+                        sendCooldownMessage(user, "八方落雷 冷却中...");
+                    }
+                }
+            }
+            // --- 岩石护符 (Rock) ---
+            else if ("Rock".equals(talisman)) {
+                if (user.isSneaking()) {
+                    // 技能 2：重力崩塌 (CD 22s)
+                    if (isSkillReady(stack, ModDataComponentTypes.SKILL_2_LAST_USE, currentTime, 440)) {
+                        stack.set(ModDataComponentTypes.BARRAGE_TICKS_LEFT, 100); // 持续 5s
+                        // 记录球心坐标：玩家坐标向上 5 格
+                        stack.set(ModDataComponentTypes.SKILL_2_POS_X, user.getX());
+                        stack.set(ModDataComponentTypes.SKILL_2_POS_Y, user.getY() + 3.0);
+                        stack.set(ModDataComponentTypes.SKILL_2_POS_Z, user.getZ());
+
+                        stack.set(ModDataComponentTypes.SKILL_2_LAST_USE, currentTime);
+                        user.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, 100, 2, false, false, true));
+                        return TypedActionResult.success(stack);
+                    }
+                } else {
+                    // 技能 1：岩土地刺 (消耗充能)
+                    int charges = stack.getOrDefault(ModDataComponentTypes.ROCK_SPIKE_CHARGES, 0);
+                    if (charges > 0) {
+                        executeRockSpikes(serverWorld, user);
+                        stack.set(ModDataComponentTypes.ROCK_SPIKE_CHARGES, charges - 1);
+                        // 如果充能从满变不满，重置充能计时器
+                        if (charges == 2) stack.set(ModDataComponentTypes.ROCK_RECHARGE_START_TIME, world.getTime());
+                        return TypedActionResult.success(stack);
+                    } else {
+                        sendCooldownMessage(user, "地刺充能不足 (10秒恢复一发)");
                     }
                 }
             }
@@ -314,7 +373,71 @@ public class SceptreItem extends Item {
                 }
             }
         }
+
+        // --- 雷电符文的持续技能逻辑 ---
+        // --- 技能 1：处理八方落雷波 (每 10 刻触发一次) ---
+        if (stack.contains(ModDataComponentTypes.THUNDER_WAVE_TICKS)) {
+            int wavesLeft = stack.get(ModDataComponentTypes.THUNDER_WAVE_TICKS);
+            if (wavesLeft > 0) {
+                if (world.getTime() % 10 == 0) {
+                    // 半径随波次扩大：3, 6, 9, 12, 15
+                    double radius = (6 - wavesLeft) * 3.0;
+                    executeThunderWave(world, player, radius, stack);
+                    stack.set(ModDataComponentTypes.THUNDER_WAVE_TICKS, wavesLeft - 1);
+                }
+            } else {
+                stack.remove(ModDataComponentTypes.THUNDER_WAVE_TICKS);
+            }
+        }
+
+        // --- 技能 2：处理雷电强化状态计时 ---
+        if (stack.contains(ModDataComponentTypes.THUNDER_SLASH_TICKS)) {
+            int slashTicks = stack.get(ModDataComponentTypes.THUNDER_SLASH_TICKS);
+            if (slashTicks > 0) {
+                // 强化状态视觉反馈 (亮紫色粒子)
+                if (world.getTime() % 4 == 0) {
+                    ((ServerWorld)world).spawnParticles(ParticleTypes.WITCH, player.getX(), player.getY(), player.getZ(), 3, 0.3, 0.5, 0.3, 0.02);
+                }
+                stack.set(ModDataComponentTypes.THUNDER_SLASH_TICKS, slashTicks - 1);
+            } else {
+                stack.remove(ModDataComponentTypes.THUNDER_SLASH_TICKS);
+                stack.remove(ModDataComponentTypes.THUNDER_KILL_COUNT); // 清理计数
+            }
+        }
+
+        //--- rock符文的持续技能逻辑 ---
+        // --- 1. 岩石护符专属：地刺自动充能逻辑 (每 10秒 恢复一发) ---
+        if ("Rock".equals(talisman)) {
+            int charges = stack.getOrDefault(ModDataComponentTypes.ROCK_SPIKE_CHARGES, 0);
+            if (charges < 2) {
+                long lastRecharge = stack.getOrDefault(ModDataComponentTypes.ROCK_RECHARGE_START_TIME, world.getTime());
+                if (world.getTime() - lastRecharge >= 200) { // 200 ticks = 10s
+                    stack.set(ModDataComponentTypes.ROCK_SPIKE_CHARGES, charges + 1);
+                    stack.set(ModDataComponentTypes.ROCK_RECHARGE_START_TIME, world.getTime());
+                    player.sendMessage(Text.literal("§6地刺充能完毕 (" + (charges + 1) + "/2)"), true);
+                }
+            }
+        }
+
+        // --- 2. 持续性技能逻辑 (BARRAGE_TICKS_LEFT 分支) ---
+        if (stack.contains(ModDataComponentTypes.BARRAGE_TICKS_LEFT)) {
+            int ticksLeft = stack.get(ModDataComponentTypes.BARRAGE_TICKS_LEFT);
+            if (ticksLeft > 0 && selected) {
+
+                // --- 岩石护符技能 2：重力崩塌 ---
+                if ("Rock".equals(talisman)) {
+                    double x = stack.getOrDefault(ModDataComponentTypes.SKILL_2_POS_X, player.getX());
+                    double y = stack.getOrDefault(ModDataComponentTypes.SKILL_2_POS_Y, player.getY());
+                    double z = stack.getOrDefault(ModDataComponentTypes.SKILL_2_POS_Z, player.getZ());
+                    executeRockGravityWell(world, player, new Vec3d(x, y, z), ticksLeft);
+                }
+            }
+        }
+
     }
+
+
+
 
     // =========================================================
     // 冰霜技能实现细节 (新增)
@@ -481,32 +604,75 @@ public class SceptreItem extends Item {
 
     @Override
     //处理左键火球和杀敌重置
+
     public boolean postHit(ItemStack stack, LivingEntity target, LivingEntity attacker) {
-        if (attacker.getWorld().isClient) return true;
+        // 1. 安全检查：必须在服务端运行，且攻击者必须是玩家
+        if (attacker.getWorld().isClient || !(attacker instanceof net.minecraft.entity.player.PlayerEntity player)) {
+            return true;
+        }
 
-        String talisman = stack.get(ModDataComponentTypes.TALISMAN_TYPE);
+        String talisman = stack.get(com.Primal.component.ModDataComponentTypes.TALISMAN_TYPE);
+        ServerWorld serverWorld = (ServerWorld) attacker.getWorld();
 
-        // 只有在技能 2 持续期间
-        if ("Flame".equals(talisman) && stack.contains(ModDataComponentTypes.FLAME_BARRAGE_TICKS)) {
-            // 1. 发射火球 (直接调用技能 2 的 execute 代码)
-            executeFlameSkill2((ServerWorld) attacker.getWorld(), (PlayerEntity) attacker, stack);
+        // -----------------------------------------------------------
+        // 逻辑 A：烈焰护符 (Flame) - 涅槃爆发状态
+        // -----------------------------------------------------------
+        if ("Flame".equals(talisman) && stack.contains(com.Primal.component.ModDataComponentTypes.FLAME_BARRAGE_TICKS)) {
+            // 1. 发射火球 (调用已有的公共方法)
+            executeFlameSkill2(serverWorld, player, stack);
 
             // 2. 杀敌计数逻辑
             if (!target.isAlive() || target.getHealth() <= 0) {
-                int kills = stack.getOrDefault(ModDataComponentTypes.FLAME_KILL_COUNT, 0) + 1;
-                stack.set(ModDataComponentTypes.FLAME_KILL_COUNT, kills);
+                int kills = stack.getOrDefault(com.Primal.component.ModDataComponentTypes.FLAME_KILL_COUNT, 0) + 1;
+                stack.set(com.Primal.component.ModDataComponentTypes.FLAME_KILL_COUNT, kills);
 
-                // 如果杀敌满 3 个，重置大招 CD
                 if (kills >= 3) {
-                    stack.remove(ModDataComponentTypes.SKILL_2_LAST_USE);
-                    stack.set(ModDataComponentTypes.FLAME_KILL_COUNT, 0); // 重置计数
-                    attacker.getWorld().playSound(null, attacker.getBlockPos(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundCategory.PLAYERS, 1.0f, 1.0f);
+                    stack.remove(com.Primal.component.ModDataComponentTypes.SKILL_2_LAST_USE);
+                    stack.set(com.Primal.component.ModDataComponentTypes.FLAME_KILL_COUNT, 0);
+                    // 播放成功音效 (根据你之前的环境，如果报错请尝试加 .value())
+                    serverWorld.playSound(null, player.getBlockPos(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundCategory.PLAYERS, 1.0f, 1.0f);
                 }
             }
         }
+
+        // -----------------------------------------------------------
+        // 逻辑 B：雷霆护符 (Thunderclap) - 雷鸣强化状态
+        // -----------------------------------------------------------
+        if ("Thunderclap".equals(talisman) && stack.contains(com.Primal.component.ModDataComponentTypes.THUNDER_SLASH_TICKS)) {
+            // 1. 协同落雷特效
+            net.minecraft.entity.LightningEntity lightning = net.minecraft.entity.EntityType.LIGHTNING_BOLT.create(serverWorld);
+            if (lightning != null) {
+                lightning.setPosition(target.getX(), target.getY(), target.getZ());
+                lightning.setCosmetic(true);
+                serverWorld.spawnEntity(lightning);
+            }
+
+            // 2. 伤害与自身增益
+            target.damage(serverWorld.getDamageSources().lightningBolt(), 3.0f);
+            attacker.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE, 300, 0));
+            attacker.addStatusEffect(new StatusEffectInstance(StatusEffects.REGENERATION, 300, 0));
+
+            // 3. 技能 2 击杀判定
+            if (!target.isAlive() || target.getHealth() <= 0) {
+                // 排除动物、村民等被动生物
+                if (!(target instanceof net.minecraft.entity.passive.PassiveEntity)) {
+                    int kills = stack.getOrDefault(com.Primal.component.ModDataComponentTypes.THUNDER_KILL_COUNT, 0) + 1;
+                    stack.set(com.Primal.component.ModDataComponentTypes.THUNDER_KILL_COUNT, kills);
+
+                    if (kills >= 3) {
+                        // 缩减 30% 冷却 (210 ticks)
+                        reduceCooldown(stack, com.Primal.component.ModDataComponentTypes.SKILL_2_LAST_USE, 210);
+                        stack.set(com.Primal.component.ModDataComponentTypes.THUNDER_KILL_COUNT, 0);
+
+                        // 由于开头定义了 player，这里可以正常工作
+                        player.sendMessage(net.minecraft.text.Text.literal("§b雷霆狂暴：冷却缩减已生效!"), true);
+                    }
+                }
+            }
+        }
+
         return true;
     }
-
     // --- 烈焰技能 2：远程火焰弹 (20格飞行 + 碰撞爆炸) ---
     public void executeFlameSkill2(ServerWorld world, PlayerEntity user, ItemStack sceptre) {
         Vec3d start = user.getEyePos();
@@ -817,6 +983,201 @@ public class SceptreItem extends Item {
 
 
     //------------------------------------------------------
+    //thunderclap护符技能实现细节
+    // --- 技能 1：八方落雷波 ---
+    private void executeThunderWave(World world, PlayerEntity user, double radius, ItemStack stack) {
+        if (!(world instanceof ServerWorld serverWorld)) return;
+        for (int i = 0; i < 8; i++) {
+            double angle = Math.toRadians(i * 45);
+            double px = user.getX() + Math.cos(angle) * radius;
+            double pz = user.getZ() + Math.sin(angle) * radius;
+            BlockPos boltPos = BlockPos.ofFloored(px, user.getY(), pz);
+
+            // 视觉落雷
+            net.minecraft.entity.LightningEntity bolt = net.minecraft.entity.EntityType.LIGHTNING_BOLT.create(serverWorld);
+            if (bolt != null) {
+                bolt.setPosition(px, user.getY(), pz);
+                bolt.setCosmetic(true);
+                serverWorld.spawnEntity(bolt);
+            }
+
+            // 伤害判定
+            Box damageBox = new Box(px - 1.5, user.getY() - 1, pz - 1.5, px + 1.5, user.getY() + 3, pz + 1.5);
+            List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class, damageBox, e -> e != user);
+            for (LivingEntity target : targets) {
+                target.damage(world.getDamageSources().lightningBolt(), 10.0f);
+
+                // 技能 1 击杀判定
+                if (!target.isAlive() || target.getHealth() <= 0) {
+                    int kills = stack.getOrDefault(ModDataComponentTypes.THUNDER_KILL_COUNT, 0) + 1;
+                    stack.set(ModDataComponentTypes.THUNDER_KILL_COUNT, kills);
+                    if (kills >= 2) {
+                        reduceCooldown(stack, ModDataComponentTypes.SKILL_1_LAST_USE, 144); // 返还 40% (18s * 0.4 = 7.2s = 144 ticks)
+                        user.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, 100, 1));
+                        user.addStatusEffect(new StatusEffectInstance(StatusEffects.REGENERATION, 100, 1));
+                        stack.set(ModDataComponentTypes.THUNDER_KILL_COUNT, 0);
+                    }
+                }
+            }
+        }
+    }
+
+    // --- 技能 2：雷鸣斩 ---
+    private void executeThunderSlash(ServerWorld world, PlayerEntity user, ItemStack stack) {
+        Vec3d look = user.getRotationVec(1.0f);
+        // 长方体范围：11x3x4 (前方11, 高3, 宽4)
+        Box slashBox = user.getBoundingBox().stretch(look.multiply(11)).expand(2, 1.5, 2);
+
+        // 视觉：亮紫色闪电粒子
+        for (int i = 0; i < 100; i++) {
+            double rx = (world.random.nextDouble() - 0.5) * 6;
+            double ry = (world.random.nextDouble()) * 3;
+            double rz = (world.random.nextDouble() - 0.5) * 6;
+            Vec3d pPos = user.getPos().add(look.multiply(world.random.nextDouble() * 11)).add(rx, ry, rz);
+            world.spawnParticles(ParticleTypes.WITCH, pPos.x, pPos.y, pPos.z, 1, 0, 0, 0, 0);
+        }
+
+        List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class, slashBox, e -> e != user);
+        for (LivingEntity target : targets) {
+            // 伤害：已损失生命值的 45%
+            float missingHp = target.getMaxHealth() - target.getHealth();
+            float damage = Math.max(2.0f, missingHp * 0.45f);
+            target.damage(world.getDamageSources().magic(), damage);
+            // 亮紫色闪烁反馈
+            world.spawnParticles(ParticleTypes.FLASH, target.getX(), target.getY() + 1, target.getZ(), 1, 0, 0, 0, 0);
+        }
+
+        // 开启 15s 强化状态
+        stack.set(ModDataComponentTypes.THUNDER_SLASH_TICKS, 300);
+        world.playSound(null, user.getBlockPos(), SoundEvents.ENTITY_LIGHTNING_BOLT_THUNDER, SoundCategory.PLAYERS, 1.0f, 1.5f);
+    }
+
+    // 辅助方法：弹开
+    private void pushBackEntities(World world, PlayerEntity user, double radius) {
+        world.getEntitiesByClass(LivingEntity.class, user.getBoundingBox().expand(radius), e -> e != user)
+                .forEach(target -> target.takeKnockback(1.5, user.getX() - target.getX(), user.getZ() - target.getZ()));
+    }
+
+    // 辅助方法：缩减 CD
+    private void reduceCooldown(ItemStack stack, ComponentType<Long> component, int ticks) {
+        if (stack.contains(component)) {
+            long lastUse = stack.get(component);
+            stack.set(component, lastUse - ticks); // 向前推移时间戳 = 减少 CD
+        }
+    }
+    //------------------------------------------------------
+    //rock护符技能实现细节
+    // --- 岩石技能 1：唤魔地刺 (击飞版) ---
+    private void executeRockSpikes(ServerWorld world, PlayerEntity user) {
+        Vec3d dir = user.getRotationVec(1.0f).multiply(1.0, 0, 1.0).normalize();
+
+        // 生成一排地刺 (共 7 个)
+        for (int i = 1; i <= 7; i++) {
+            double px = user.getX() + dir.x * i;
+            double pz = user.getZ() + dir.z * i;
+            double py = user.getY();
+
+            // 寻找地面高度
+            BlockPos ground = BlockPos.ofFloored(px, py + 1, pz);
+            while (world.isAir(ground) && ground.getY() > world.getBottomY()) {
+                ground = ground.down();
+            }
+
+            // 召唤原版唤魔地刺实体
+            net.minecraft.entity.mob.EvokerFangsEntity fangs = new net.minecraft.entity.mob.EvokerFangsEntity(world, px, ground.getY() + 1, pz, 0, i, user);
+            world.spawnEntity(fangs);
+
+            // 自定义击飞逻辑：地刺出现 0.5s 后检测周围实体并弹起
+            Box impactArea = new Box(px - 1, ground.getY(), pz - 1, px + 1, ground.getY() + 2, pz + 1);
+            world.getServer().execute(() -> {
+                world.getEntitiesByClass(LivingEntity.class, impactArea, e -> e != user)
+                        .forEach(target -> {
+                            target.damage(world.getDamageSources().magic(), 8.0f);
+                            target.addVelocity(0, 0.8, 0); // 强力击飞
+                            target.velocityModified = true;
+                        });
+            });
+        }
+        world.playSound(null, user.getBlockPos(), SoundEvents.ENTITY_EVOKER_FANGS_ATTACK, SoundCategory.PLAYERS, 1.0f, 0.8f);
+    }
+
+    // --- 岩石技能 2：重力崩塌 (球体吸引) ---
+// --- 岩石技能 2：重力崩塌 (高空球体吸引) ---
+    private void executeRockGravityWell(World world, PlayerEntity user, Vec3d center, int ticksLeft) {
+        if (!(world instanceof ServerWorld serverWorld)) return;
+
+        double radius = 10.0;
+
+        // 1. 【视觉优化】更有秩序的汇聚粒子
+        for (int i = 0; i < 10; i++) {
+            // 在球体内随机选点作为起点
+            Vec3d randomPos = center.add((world.random.nextDouble() - 0.5) * 16, (world.random.nextDouble() - 0.5) * 16, (world.random.nextDouble() - 0.5) * 16);
+            // 计算指向中心的方向
+            Vec3d toCenter = center.subtract(randomPos).normalize().multiply(0.6);
+
+            // 使用传送门粒子模拟物质被吸入
+            serverWorld.spawnParticles(ParticleTypes.REVERSE_PORTAL, randomPos.x, randomPos.y, randomPos.z, 0, toCenter.x, toCenter.y, toCenter.z, 1.0);
+
+            // 绘制核心黑洞的微光（让中心看起来非常沉重）
+            if (i < 3) {
+                serverWorld.spawnParticles(ParticleTypes.SMOKE, center.x, center.y, center.z, 5, 0.2, 0.2, 0.2, 0.02);
+            }
+        }
+
+        // 2. 【核心逻辑】平滑且不可逃脱的重力场
+        Box box = new Box(center.subtract(radius, radius, radius), center.add(radius, radius, radius));
+        List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class, box,
+                e -> e != user && e.isAlive() && e.getPos().distanceTo(center) <= radius);
+
+        for (LivingEntity target : targets) {
+            Vec3d currentPos = target.getPos();
+            Vec3d directionToCenter = center.subtract(currentPos);
+            double distance = directionToCenter.length();
+
+            // A. 重置掉落伤害
+            target.fallDistance = 0.0f;
+
+            // B. 强制速度修正（平滑吸入的关键）
+            if (distance > 0.5) {
+                // 计算一个恒定的吸入速度，不快但无法反抗
+                // 怪物距离越远，吸力越稳；距离越近，吸力越轻柔，防止飞过头
+                Vec3d pullVelocity = directionToCenter.normalize().multiply(0.25);
+
+                // 如果怪物试图逃跑（速度方向与中心相反），强行抵消掉
+                target.setVelocity(pullVelocity.x, pullVelocity.y + 0.05, pullVelocity.z);
+            } else {
+                // 如果已经到达中心点附近（0.5格内），将其“锁死”在原地浮动
+                target.setVelocity(0, 0.02, 0);
+            }
+            target.velocityModified = true;
+
+            // C. 持续性伤害（每 0.5s 跳一次字）
+            if (ticksLeft % 10 == 0) {
+                target.damage(world.getDamageSources().magic(), 3.0f);
+            }
+        }
+
+        // 吸引音效（低沉的重力声）
+        if (ticksLeft % 20 == 0) {
+            world.playSound(null, BlockPos.ofFloored(center), SoundEvents.BLOCK_BEACON_AMBIENT, SoundCategory.PLAYERS, 1.5f, 0.5f);
+        }
+
+        // 3. 最终大爆炸（维持原有的强力收尾）
+        if (ticksLeft == 1) {
+            serverWorld.spawnParticles(ParticleTypes.EXPLOSION_EMITTER, center.x, center.y, center.z, 10, 1, 1, 1, 0.1);
+            serverWorld.spawnParticles(ParticleTypes.FLASH, center.x, center.y, center.z, 1, 0, 0, 0, 0);
+
+            Box explosionBox = new Box(center.subtract(6, 6, 6), center.add(6, 6, 6));
+            world.getEntitiesByClass(LivingEntity.class, explosionBox, e -> e != user).forEach(target -> {
+                target.damage(world.getDamageSources().explosion(user, user), 10.0f);
+                Vec3d push = target.getPos().subtract(center).normalize().multiply(2.5);
+                target.addVelocity(push.x, 0.8, push.z);
+                target.velocityModified = true;
+            });
+            world.playSound(null, BlockPos.ofFloored(center), SoundEvents.ENTITY_GENERIC_EXPLODE.value(), SoundCategory.PLAYERS, 2.0f, 0.5f);
+        }
+    }
+    //------------------------------------------------------
 
 
     // --- 基础幻化技能：幻化之波 (原逻辑) ---
@@ -882,6 +1243,11 @@ public class SceptreItem extends Item {
             tooltip.add(Text.literal("被动: 夜视 & 水肺").formatted(Formatting.BLUE));
             tooltip.add(Text.literal("长按右键: 吸水射线 ").formatted(Formatting.GRAY));
             tooltip.add(Text.literal("Shift+右键: 源流领域 ").formatted(Formatting.GRAY));
+        }
+        else if ("Thunderclap".equals(talisman)) {
+            tooltip.add(Text.literal("护符: 雷电").formatted(Formatting.GOLD, Formatting.BOLD));
+            tooltip.add(Text.literal("右键:  八方钧雷").formatted(Formatting.GRAY));
+            tooltip.add(Text.literal("Shift+右键: 雷霆寂灭").formatted(Formatting.GRAY));
         }
         // 如果没有绑定护符，但绑定了基础幻化魔法
         else if ("Illusionary".equals(bound)) {

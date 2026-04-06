@@ -67,6 +67,19 @@ public class ModDataComponentTypes {
     // 记录技能 2 已经吸收水分的秒数（用于爱心堆叠）
     public static final ComponentType<Integer> STREAM_ABSORB_LAYERS = register("stream_absorb_layers", builder -> builder.codec(Codec.INT).packetCodec(PacketCodecs.VAR_INT));
 
+    //新增：thunderclap符文武器的持续时间组件
+
+    public static final ComponentType<Integer> THUNDER_WAVE_TICKS = register("thunder_wave_ticks", builder -> builder.codec(Codec.INT).packetCodec(PacketCodecs.VAR_INT));
+    public static final ComponentType<Integer> THUNDER_SLASH_TICKS = register("thunder_slash_ticks", builder -> builder.codec(Codec.INT).packetCodec(PacketCodecs.VAR_INT));
+    public static final ComponentType<Integer> THUNDER_KILL_COUNT = register("thunder_kill_count", builder -> builder.codec(Codec.INT).packetCodec(PacketCodecs.VAR_INT));
+
+    //新增：rock符文武器的持续时间组件
+    // 在 ModDataComponentTypes.java 中添加：
+// 技能 1：地刺充能数量 (0-2)
+    public static final ComponentType<Integer> ROCK_SPIKE_CHARGES = register("rock_spike_charges", builder -> builder.codec(Codec.INT).packetCodec(PacketCodecs.VAR_INT));
+    // 技能 1：充能开始的时间戳
+    public static final ComponentType<Long> ROCK_RECHARGE_START_TIME = register("rock_recharge_start_time", builder -> builder.codec(Codec.LONG).packetCodec(PacketCodecs.VAR_LONG));
+
     public static void registerDataComponentTypes() {
         PrimalMagic.LOGGER.info("Registering Data Component Types for " + PrimalMagic.MOD_ID);
     }
