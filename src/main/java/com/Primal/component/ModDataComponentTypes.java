@@ -79,6 +79,9 @@ public class ModDataComponentTypes {
     public static final ComponentType<Integer> ROCK_SPIKE_CHARGES = register("rock_spike_charges", builder -> builder.codec(Codec.INT).packetCodec(PacketCodecs.VAR_INT));
     // 技能 1：充能开始的时间戳
     public static final ComponentType<Long> ROCK_RECHARGE_START_TIME = register("rock_recharge_start_time", builder -> builder.codec(Codec.LONG).packetCodec(PacketCodecs.VAR_LONG));
+    // 在 ModDataComponentTypes.java 中，将之前的 ROCK_RECHARGE_START_TIME 修改（或新增）为：
+// 记录距离下一次充能还剩多少刻 (默认 200 刻 = 10秒)
+    public static final ComponentType<Integer> ROCK_RECHARGE_TICKS = register("rock_recharge_ticks", builder -> builder.codec(Codec.INT).packetCodec(PacketCodecs.VAR_INT));
 
     public static void registerDataComponentTypes() {
         PrimalMagic.LOGGER.info("Registering Data Component Types for " + PrimalMagic.MOD_ID);

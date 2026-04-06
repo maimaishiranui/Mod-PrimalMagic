@@ -209,24 +209,30 @@ public class SceptreItem extends Item {
                         stack.set(ModDataComponentTypes.BARRAGE_TICKS_LEFT, 100); // 持续 5s
                         // 记录球心坐标：玩家坐标向上 5 格
                         stack.set(ModDataComponentTypes.SKILL_2_POS_X, user.getX());
-                        stack.set(ModDataComponentTypes.SKILL_2_POS_Y, user.getY() + 3.0);
+                        stack.set(ModDataComponentTypes.SKILL_2_POS_Y, user.getY() + 4.0);
                         stack.set(ModDataComponentTypes.SKILL_2_POS_Z, user.getZ());
 
                         stack.set(ModDataComponentTypes.SKILL_2_LAST_USE, currentTime);
                         user.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, 100, 2, false, false, true));
                         return TypedActionResult.success(stack);
                     }
-                } else {
-                    // 技能 1：岩土地刺 (消耗充能)
+                }  else {
+                    // 技能 1：消耗充能
                     int charges = stack.getOrDefault(ModDataComponentTypes.ROCK_SPIKE_CHARGES, 0);
                     if (charges > 0) {
                         executeRockSpikes(serverWorld, user);
+                        // 扣除一发充能
                         stack.set(ModDataComponentTypes.ROCK_SPIKE_CHARGES, charges - 1);
-                        // 如果充能从满变不满，重置充能计时器
-                        if (charges == 2) stack.set(ModDataComponentTypes.ROCK_RECHARGE_START_TIME, world.getTime());
+
+                        // 【关键】如果是从满电状态第一次消耗，强制设置计时器为 200
+                        if (charges == 2) {
+                            stack.set(ModDataComponentTypes.ROCK_RECHARGE_TICKS, 200);
+                        }
+
                         return TypedActionResult.success(stack);
                     } else {
-                        sendCooldownMessage(user, "地刺充能不足 (10秒恢复一发)");
+                        sendCooldownMessage(user, "§c地刺正在充能中...");
+                        return TypedActionResult.fail(stack);
                     }
                 }
             }
@@ -407,15 +413,29 @@ public class SceptreItem extends Item {
 
         //--- rock符文的持续技能逻辑 ---
         // --- 1. 岩石护符专属：地刺自动充能逻辑 (每 10秒 恢复一发) ---
+// 在 inventoryTick 方法中找到 Rock 分支：
         if ("Rock".equals(talisman)) {
-            int charges = stack.getOrDefault(ModDataComponentTypes.ROCK_SPIKE_CHARGES, 0);
-            if (charges < 2) {
-                long lastRecharge = stack.getOrDefault(ModDataComponentTypes.ROCK_RECHARGE_START_TIME, world.getTime());
-                if (world.getTime() - lastRecharge >= 200) { // 200 ticks = 10s
-                    stack.set(ModDataComponentTypes.ROCK_SPIKE_CHARGES, charges + 1);
-                    stack.set(ModDataComponentTypes.ROCK_RECHARGE_START_TIME, world.getTime());
-                    player.sendMessage(Text.literal("§6地刺充能完毕 (" + (charges + 1) + "/2)"), true);
+            // --- 核心修改：只有在 Selected (选中) 状态下才进行充能 ---
+            if (selected) {
+                int charges = stack.getOrDefault(ModDataComponentTypes.ROCK_SPIKE_CHARGES, 0);
+
+                if (charges < 2) {
+                    int ticksLeft = stack.getOrDefault(ModDataComponentTypes.ROCK_RECHARGE_TICKS, 200);
+
+                    if (ticksLeft <= 0) {
+                        // 完成一次充能
+                        stack.set(ModDataComponentTypes.ROCK_SPIKE_CHARGES, charges + 1);
+                        stack.set(ModDataComponentTypes.ROCK_RECHARGE_TICKS, 200);
+                        // 提示文字
+                        player.sendMessage(Text.literal("§6地刺已就绪 (" + (charges + 1) + "/2)"), true);
+                    } else {
+                        // 每一刻减 1
+                        stack.set(ModDataComponentTypes.ROCK_RECHARGE_TICKS, ticksLeft - 1);
+                    }
                 }
+            } else {
+                // 如果玩家切走了法杖，我们可以在这里做一些清理工作 (可选)
+                // 比如停止某些声音或视觉粒子
             }
         }
 
@@ -435,9 +455,6 @@ public class SceptreItem extends Item {
         }
 
     }
-
-
-
 
     // =========================================================
     // 冰霜技能实现细节 (新增)
@@ -1071,29 +1088,27 @@ public class SceptreItem extends Item {
     private void executeRockSpikes(ServerWorld world, PlayerEntity user) {
         Vec3d dir = user.getRotationVec(1.0f).multiply(1.0, 0, 1.0).normalize();
 
-        // 生成一排地刺 (共 7 个)
         for (int i = 1; i <= 7; i++) {
             double px = user.getX() + dir.x * i;
             double pz = user.getZ() + dir.z * i;
             double py = user.getY();
 
-            // 寻找地面高度
             BlockPos ground = BlockPos.ofFloored(px, py + 1, pz);
             while (world.isAir(ground) && ground.getY() > world.getBottomY()) {
                 ground = ground.down();
             }
 
-            // 召唤原版唤魔地刺实体
             net.minecraft.entity.mob.EvokerFangsEntity fangs = new net.minecraft.entity.mob.EvokerFangsEntity(world, px, ground.getY() + 1, pz, 0, i, user);
             world.spawnEntity(fangs);
 
-            // 自定义击飞逻辑：地刺出现 0.5s 后检测周围实体并弹起
+            // 优化点：调整击飞力度
             Box impactArea = new Box(px - 1, ground.getY(), pz - 1, px + 1, ground.getY() + 2, pz + 1);
             world.getServer().execute(() -> {
                 world.getEntitiesByClass(LivingEntity.class, impactArea, e -> e != user)
                         .forEach(target -> {
                             target.damage(world.getDamageSources().magic(), 8.0f);
-                            target.addVelocity(0, 0.8, 0); // 强力击飞
+                            // 将力度从 0.8 减小到 0.45，刚好是顶起 2 格左右
+                            target.addVelocity(0, 0.1, 0);
                             target.velocityModified = true;
                         });
             });
@@ -1248,6 +1263,11 @@ public class SceptreItem extends Item {
             tooltip.add(Text.literal("护符: 雷电").formatted(Formatting.GOLD, Formatting.BOLD));
             tooltip.add(Text.literal("右键:  八方钧雷").formatted(Formatting.GRAY));
             tooltip.add(Text.literal("Shift+右键: 雷霆寂灭").formatted(Formatting.GRAY));
+        }
+        else if ("Rock".equals(talisman)) {
+            tooltip.add(Text.literal("护符: 磐岩").formatted(Formatting.GOLD, Formatting.BOLD));
+            tooltip.add(Text.literal("右键:  地裂穿刺").formatted(Formatting.GRAY));
+            tooltip.add(Text.literal("Shift+右键: 引力陨石").formatted(Formatting.GRAY));
         }
         // 如果没有绑定护符，但绑定了基础幻化魔法
         else if ("Illusionary".equals(bound)) {
