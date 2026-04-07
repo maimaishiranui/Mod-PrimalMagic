@@ -34,12 +34,13 @@ public class PrimalMagic implements ModInitializer {
 	@Override
 
 	public void onInitialize() {
+		ModDataComponentTypes.registerDataComponentTypes();
 		ModItems.registerModItems();
 		ModItemGroup.registerItemGroups();
 		ModBlocks.registerModBlock();
 		ModBlockEntities.registerBlockEntities();
 		ModScreenHandlers.registerScreenHandlers();
-		ModDataComponentTypes.registerDataComponentTypes();
+
 
 		//监听方块和状态
 		AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {

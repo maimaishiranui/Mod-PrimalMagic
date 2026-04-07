@@ -236,6 +236,43 @@ public class SceptreItem extends Item {
                     }
                 }
             }
+            // --- 灵木护符 (Spiritwood) 平衡调整版 ---
+            else if ("Spiritwood".equals(talisman)) {
+                if (user.isSneaking()) {
+                    // 技能 2：枯萎领域 (新 CD: 20s = 400 ticks)
+                    if (isSkillReady(stack, ModDataComponentTypes.SKILL_2_LAST_USE, currentTime, 400)) {
+                        stack.set(ModDataComponentTypes.BARRAGE_TICKS_LEFT, 100); // 持续 5s
+                        stack.set(ModDataComponentTypes.SKILL_2_LAST_USE, currentTime);
+
+                        // 【数值联动】立即返还技能 1 的 50% 冷却 (15s * 0.5 = 7.5s = 150 ticks)
+                        reduceCooldown(stack, ModDataComponentTypes.SKILL_1_LAST_USE, 150);
+
+                        user.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, 100, 2, false, false, true));
+                        world.playSound(null, user.getBlockPos(), SoundEvents.ENTITY_ZOMBIE_VILLAGER_CURE, SoundCategory.PLAYERS, 1.0f, 0.5f);
+                        return TypedActionResult.success(stack);
+                    } else {
+                        sendCooldownMessage(user, "枯萎领域 冷却中...");
+                    }
+                } else {
+                    // 技能 1：自然觉醒 (新 CD: 15s = 300 ticks)
+                    if (isSkillReady(stack, ModDataComponentTypes.SKILL_1_LAST_USE, currentTime, 300)) {
+                        executeSpiritwoodGrowth(serverWorld, user);
+
+                        // 【数值调整】
+                        // 1. 生命上限提升 (+10颗心)，持续时间保持 10s (200 ticks)
+                        user.addStatusEffect(new StatusEffectInstance(StatusEffects.HEALTH_BOOST, 200, 4));
+                        // 2. 生命恢复 II，持续时间缩短至 8s (160 ticks)
+                        user.addStatusEffect(new StatusEffectInstance(StatusEffects.REGENERATION, 160, 1));
+
+                        stack.set(ModDataComponentTypes.SKILL_1_LAST_USE, currentTime);
+                        user.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, 100, 2, false, false, true));
+                        world.playSound(null, user.getBlockPos(), SoundEvents.BLOCK_CHERRY_SAPLING_PLACE, SoundCategory.PLAYERS, 1.0f, 1.0f);
+                        return TypedActionResult.success(stack);
+                    } else {
+                        sendCooldownMessage(user, "自然觉醒 冷却中...");
+                    }
+                }
+            }
             // 如果有护符但不是上述任何一种，不继续往下走
             return TypedActionResult.pass(stack);
         }
@@ -366,6 +403,15 @@ public class SceptreItem extends Item {
                 else if ("Stream".equals(talisman)) {
                     executeStreamAOE(world, player, stack, ticksLeft);
                 }
+                // 分支：Spiritwood (枯萎领域)
+                else if ("Spiritwood".equals(talisman)) {
+                    executeSpiritwoodPoisonArea(world, player, ticksLeft);
+
+                    // 技能 1 的粒子特效：两种绿色粒子围绕
+                    if (stack.contains(ModDataComponentTypes.SKILL_1_LAST_USE) && (world.getTime() - stack.get(ModDataComponentTypes.SKILL_1_LAST_USE) < 200)) {
+                        spawnSpiritwoodAura(world, player, ticksLeft);
+                    }
+                }
 
                 stack.set(com.Primal.component.ModDataComponentTypes.BARRAGE_TICKS_LEFT, ticksLeft - 1);
             } else {
@@ -413,7 +459,7 @@ public class SceptreItem extends Item {
 
         //--- rock符文的持续技能逻辑 ---
         // --- 1. 岩石护符专属：地刺自动充能逻辑 (每 10秒 恢复一发) ---
-// 在 inventoryTick 方法中找到 Rock 分支：
+        // 在 inventoryTick 方法中找到 Rock 分支：
         if ("Rock".equals(talisman)) {
             // --- 核心修改：只有在 Selected (选中) 状态下才进行充能 ---
             if (selected) {
@@ -438,6 +484,7 @@ public class SceptreItem extends Item {
                 // 比如停止某些声音或视觉粒子
             }
         }
+
 
         // --- 2. 持续性技能逻辑 (BARRAGE_TICKS_LEFT 分支) ---
         if (stack.contains(ModDataComponentTypes.BARRAGE_TICKS_LEFT)) {
@@ -1121,7 +1168,7 @@ public class SceptreItem extends Item {
     private void executeRockGravityWell(World world, PlayerEntity user, Vec3d center, int ticksLeft) {
         if (!(world instanceof ServerWorld serverWorld)) return;
 
-        double radius = 10.0;
+        double radius = 12.0;
 
         // 1. 【视觉优化】更有秩序的汇聚粒子
         for (int i = 0; i < 10; i++) {
@@ -1156,7 +1203,7 @@ public class SceptreItem extends Item {
             if (distance > 0.5) {
                 // 计算一个恒定的吸入速度，不快但无法反抗
                 // 怪物距离越远，吸力越稳；距离越近，吸力越轻柔，防止飞过头
-                Vec3d pullVelocity = directionToCenter.normalize().multiply(0.25);
+                Vec3d pullVelocity = directionToCenter.normalize().multiply(0.35);
 
                 // 如果怪物试图逃跑（速度方向与中心相反），强行抵消掉
                 target.setVelocity(pullVelocity.x, pullVelocity.y + 0.05, pullVelocity.z);
@@ -1192,8 +1239,78 @@ public class SceptreItem extends Item {
             world.playSound(null, BlockPos.ofFloored(center), SoundEvents.ENTITY_GENERIC_EXPLODE.value(), SoundCategory.PLAYERS, 2.0f, 0.5f);
         }
     }
-    //------------------------------------------------------
 
+        // 4.修复物品数据被修改时导致的切替动作
+
+        public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
+            // 如果 slotChanged 为 false，说明玩家没换格子，只是数据变了。
+            // 此时返回 false，禁止播放重新装备动画，这样手就不会隐身了。
+            return slotChanged;
+        }
+    //------------------------------------------------------
+    //spiritual wood护符法术实现
+    // --- 技能 1：万物生长 (5x5 铺草) ---
+    private void executeSpiritwoodGrowth(ServerWorld world, PlayerEntity user) {
+        BlockPos center = user.getBlockPos();
+        for (int x = -2; x <= 2; x++) {
+            for (int z = -2; z <= 2; z++) {
+                BlockPos targetPos = center.add(x, 0, z);
+                // 寻找地面
+                if (world.getBlockState(targetPos.down()).isOf(Blocks.GRASS_BLOCK) || world.getBlockState(targetPos.down()).isOf(Blocks.DIRT)) {
+                    if (world.isAir(targetPos)) {
+                        // 1.21 中使用 SHORT_GRASS 替代原版的 GRASS
+                        world.setBlockState(targetPos, Blocks.SHORT_GRASS.getDefaultState());
+                        world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, targetPos.getX() + 0.5, targetPos.getY() + 0.5, targetPos.getZ() + 0.5, 2, 0.2, 0.2, 0.2, 0.05);
+                    }
+                }
+            }
+        }
+    }
+
+    // --- 技能 1 的粒子特效 (双色绿围绕) ---
+    private void spawnSpiritwoodAura(World world, PlayerEntity user, int tick) {
+        if (!(world instanceof ServerWorld serverWorld)) return;
+        double angle = tick * 0.2;
+        for (int i = 0; i < 2; i++) {
+            double offset = i * Math.PI;
+            double px = user.getX() + Math.cos(angle + offset) * 1.2;
+            double pz = user.getZ() + Math.sin(angle + offset) * 1.2;
+            // 使用两种不同的绿色粒子
+            serverWorld.spawnParticles(ParticleTypes.HAPPY_VILLAGER, px, user.getY() + 1.0, pz, 1, 0, 0, 0, 0);
+            serverWorld.spawnParticles(ParticleTypes.COMPOSTER, px, user.getY() + 0.8, pz, 1, 0, 0, 0, 0);
+        }
+    }
+
+    // --- 技能 2：枯萎领域 (5x5 伤害 + 剧毒) ---
+    private void executeSpiritwoodPoisonArea(World world, PlayerEntity user, int ticksLeft) {
+        if (!(world instanceof ServerWorld serverWorld)) return;
+
+        // 视觉：棕色粒子 (使用泥土破碎粒子模拟)
+        for (int i = 0; i < 5; i++) {
+            double rx = (world.random.nextDouble() - 0.5) * 5.0;
+            double rz = (world.random.nextDouble() - 0.5) * 5.0;
+            serverWorld.spawnParticles(new net.minecraft.particle.BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.DIRT.getDefaultState()),
+                    user.getX() + rx, user.getY() + 0.1, user.getZ() + rz, 1, 0, 0.2, 0, 0.05);
+        }
+
+        // 每秒 (20刻) 造成 3 伤害
+        if (ticksLeft % 20 == 0) {
+            Box box = user.getBoundingBox().expand(2.5, 1.0, 2.5); // 5x5 范围
+            List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class, box, e -> e != user);
+            for (LivingEntity target : targets) {
+                target.damage(world.getDamageSources().magic(), 3.0f);
+            }
+            world.playSound(null, user.getBlockPos(), SoundEvents.ENTITY_GENERIC_BURN, SoundCategory.PLAYERS, 0.5f, 0.8f);
+        }
+
+        // 技能结束 (ticksLeft == 1)：施加 3 秒剧毒 2
+        if (ticksLeft == 1) {
+            Box box = user.getBoundingBox().expand(2.5, 1.0, 2.5);
+            world.getEntitiesByClass(LivingEntity.class, box, e -> e != user)
+                    .forEach(target -> target.addStatusEffect(new StatusEffectInstance(StatusEffects.POISON, 60, 1)));
+            world.playSound(null, user.getBlockPos(), SoundEvents.ENTITY_SPIDER_DEATH, SoundCategory.PLAYERS, 1.0f, 1.2f);
+        }
+    }
 
     // --- 基础幻化技能：幻化之波 (原逻辑) ---
     private void executeBasicIllusionary(ServerWorld world, PlayerEntity user, ItemStack stack, Hand hand) {
@@ -1268,6 +1385,11 @@ public class SceptreItem extends Item {
             tooltip.add(Text.literal("护符: 磐岩").formatted(Formatting.GOLD, Formatting.BOLD));
             tooltip.add(Text.literal("右键:  地裂穿刺").formatted(Formatting.GRAY));
             tooltip.add(Text.literal("Shift+右键: 引力陨石").formatted(Formatting.GRAY));
+        }
+        else if ("Spiritwood".equals(talisman)) {
+            tooltip.add(Text.literal("护符: 灵木").formatted(Formatting.GREEN, Formatting.BOLD));
+            tooltip.add(Text.literal("右键: 自然觉醒").formatted(Formatting.GRAY));
+            tooltip.add(Text.literal("Shift+右键: 枯萎领域 ").formatted(Formatting.GRAY));
         }
         // 如果没有绑定护符，但绑定了基础幻化魔法
         else if ("Illusionary".equals(bound)) {
