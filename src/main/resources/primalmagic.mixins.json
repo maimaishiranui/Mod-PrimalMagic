@@ -3,7 +3,8 @@
 	"package": "com.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
-		"ExampleMixin"
+		"ExampleMixin",
+		"FishingBobberMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
