@@ -12,6 +12,13 @@ base {
 
 repositories {
 	// Add repositories to retrieve artifacts from in here.
+	// GeckoLib 官方仓库
+	maven { url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
+
+	// 备用仓库：Modrinth (非常推荐，镜像很多库)
+	maven {
+		url = "https://api.modrinth.com/maven"
+	}
 }
 
 fabricApi {
@@ -23,12 +30,17 @@ fabricApi {
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+
+	// 1. 恢复这行注释！GeckoLib 依赖它
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
-	// Fabric API.
+	// 2. 使用 Modrinth 镜像格式的 GeckoLib 5.0.2
+	// 这种格式在 Modrinth 仓库中是最稳定的
+	modImplementation "maven.modrinth:geckolib:4.5.8-fabric"
+
+	// 3. Fabric API
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
-
 processResources {
 	inputs.property "version", project.version
 

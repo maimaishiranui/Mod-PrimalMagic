@@ -4,12 +4,15 @@ import com.Primal.block.ModBlockEntities;
 import com.Primal.block.ModBlocks;
 import com.Primal.component.ModDataComponentTypes;
 import com.Primal.datagen.ModPlacedFeatures;
+import com.Primal.entity.MingYuanEntity;
+import com.Primal.entity.ModEntities;
 import com.Primal.item.ModGuideBook;
 import com.Primal.item.ModItemGroup;
 import com.Primal.item.ModItems;
 import com.Primal.item.SceptreItem;
 import com.Primal.screen.ModScreenHandlers;
 import com.Primal.util.ModTalismanDrops; // 确保你有这个工具类
+
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
@@ -21,6 +24,7 @@ import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -128,6 +132,10 @@ public class PrimalMagic implements ModInitializer {
 				player.sendMessage(Text.literal("§d[原初魔法]§r 魔法的力量已觉醒，请查收你的向导书！"), false);
 			}
 		});
+
+		//-------------------6.生物实体注册-------------------
+		ModEntities.register();
+		FabricDefaultAttributeRegistry.register(ModEntities.MINGYUAN, MingYuanEntity.setAttributes());
 
 		LOGGER.info("Primal Magic Initialized with Talisman Drops!");
 	}
