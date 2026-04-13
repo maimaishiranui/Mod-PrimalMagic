@@ -106,7 +106,9 @@ public class MingYuanEntity extends HostileEntity implements GeoEntity {
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() { return this.cache; }
 
-    // --- AI: 三连发射击逻辑 ---
+    // =========================================================
+    // 性能优化版 AI 攻击类
+    // =========================================================
     static class MingYuanAttackGoal extends Goal {
         private final MingYuanEntity boss;
         private int timer = 0;
@@ -114,56 +116,79 @@ public class MingYuanEntity extends HostileEntity implements GeoEntity {
         public MingYuanAttackGoal(MingYuanEntity boss) { this.boss = boss; }
 
         @Override
-        public boolean canStart() { return boss.getTarget() != null && boss.getTarget().isAlive(); }
+        public boolean canStart() {
+            return boss.getTarget() != null && boss.getTarget().isAlive();
+        }
 
         @Override
-        public void start() { boss.dataTracker.set(IS_ATTACKING, true); }
+        public void start() {
+            boss.dataTracker.set(IS_ATTACKING, true);
+            this.timer = 0;
+        }
 
         @Override
-        public void stop() { boss.dataTracker.set(IS_ATTACKING, false); timer = 0; }
+        public void stop() {
+            boss.dataTracker.set(IS_ATTACKING, false);
+        }
 
         @Override
         public void tick() {
             LivingEntity target = boss.getTarget();
             if (target == null) return;
+
             boss.getLookControl().lookAt(target, 30, 30);
 
             timer++;
-            if (timer == 20) shootSnowball(target);
-            else if (timer == 40) shootFireball(target);
-            else if (timer == 60) {
-                shootWind(target);
-                timer = -20; // 进入 40 刻的休息期
+            // 将频率降低，给电脑喘息空间
+            if (timer == 30) { // 1.5秒发第一弹
+                shootProjectile(target, 1);
+            } else if (timer == 60) { // 3秒发第二弹
+                shootProjectile(target, 2);
+            } else if (timer == 90) { // 4.5秒发第三弹
+                shootProjectile(target, 3);
+                timer = -10; // 进入 2 秒的休息期
             }
         }
 
-        private void shootSnowball(LivingEntity target) {
-            SnowballEntity ball = new SnowballEntity(boss.getWorld(), boss);
-            ball.setPosition(boss.getX(), boss.getEyeY(), boss.getZ());
-            ball.setVelocity(target.getX()-boss.getX(), target.getEyeY()-boss.getEyeY(), target.getZ()-boss.getZ(), 1.3f, 1);
-            boss.getWorld().spawnEntity(ball);
-            target.damage(boss.getWorld().getDamageSources().freeze(), 2.0f);
-            boss.swingHand(Hand.MAIN_HAND);
-        }
+        /**
+         * 统一发射逻辑，加入了【发射点位移】防止自撞卡死
+         */
+        private void shootProjectile(LivingEntity target, int type) {
+            if (boss.getWorld().isClient) return;
 
-        private void shootFireball(LivingEntity target) {
-            Vec3d vel = new Vec3d(target.getX()-boss.getX(), target.getBodyY(0.5)-boss.getEyeY(), target.getZ()-boss.getZ()).normalize();
-            SmallFireballEntity f = new SmallFireballEntity(boss.getWorld(), boss.getX(), boss.getEyeY(), boss.getZ(), vel);
-            f.setOwner(boss);
-            boss.getWorld().spawnEntity(f);
-            boss.swingHand(Hand.MAIN_HAND);
-        }
+            // 【关键修复】计算发射点：在 Boss 眼睛位置 加上 准星方向 * 2.5 格偏移
+            // 这样子弹会直接生成在 Boss 身体外，不会发生自撞死循环
+            Vec3d lookVec = boss.getRotationVec(1.0f);
+            double spawnX = boss.getX() + lookVec.x * 2.5;
+            double spawnY = boss.getEyeY() + lookVec.y * 2.5;
+            double spawnZ = boss.getZ() + lookVec.z * 2.5;
 
-        private void shootWind(LivingEntity target) {
-            WindChargeEntity w = net.minecraft.entity.EntityType.WIND_CHARGE.create(boss.getWorld());
-            if (w != null) {
-                w.refreshPositionAndAngles(boss.getX(), boss.getEyeY(), boss.getZ(), 0, 0);
-                w.setOwner(boss);
-                w.setVelocity(target.getX()-boss.getX(), target.getEyeY()-boss.getEyeY(), target.getZ()-boss.getZ(), 1.3f, 1);
-                boss.getWorld().spawnEntity(w);
+            Vec3d velocity = new Vec3d(target.getX() - spawnX,
+                    target.getBodyY(0.5) - spawnY,
+                    target.getZ() - spawnZ).normalize();
+
+            if (type == 1) { // 雪球
+                SnowballEntity ball = new SnowballEntity(boss.getWorld(), boss);
+                ball.setPosition(spawnX, spawnY, spawnZ);
+                ball.setVelocity(velocity.x, velocity.y, velocity.z, 1.2f, 1.0f);
+                boss.getWorld().spawnEntity(ball);
+                target.damage(boss.getWorld().getDamageSources().freeze(), 2.0f);
+            }
+            else if (type == 2) { // 火球
+                SmallFireballEntity f = new SmallFireballEntity(boss.getWorld(), spawnX, spawnY, spawnZ, velocity);
+                f.setOwner(boss);
+                boss.getWorld().spawnEntity(f);
+            }
+            else if (type == 3) { // 模拟风弹 (暂时使用简单伤害 + 击退代替，最安全)
                 target.addStatusEffect(new StatusEffectInstance(StatusEffects.BLINDNESS, 20, 0));
-                boss.swingHand(Hand.MAIN_HAND);
+                target.takeKnockback(1.5, -lookVec.x, -lookVec.z);
+                target.damage(boss.getWorld().getDamageSources().magic(), 1.0f);
+
+                // 仅在此时播放一个风声音
+                boss.getWorld().playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_BREEZE_SHOOT, SoundCategory.HOSTILE, 1.0f, 1.0f);
             }
+
+            boss.swingHand(Hand.MAIN_HAND);
         }
     }
 }
