@@ -7,6 +7,7 @@ import  net.minecraft.item.Item;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Rarity;
 
 public class ModItems {
 
@@ -62,7 +63,11 @@ public class ModItems {
 
     //===Boss掉落物===//
     public static final Item SOUL_OF_MINGYUAN = registerItem("soul_of_mingyuan",new Item(new Item.Settings().fireproof()));
-    //进入原初维度时必须击败的Boss所需的掉落物
+    //召唤元素之母的前提物品
+
+    public static final Item ANCIENT_KEY = registerItem("ancient_key",
+            new AncientKeyItem(new Item.Settings().maxCount(1).rarity(Rarity.EPIC).fireproof())); // 史诗级、不可堆叠、防火
+
     public static final Item ELEMENTAL_MASTERMIND = registerItem("elemental_mastermind",new Item(new Item.Settings().fireproof()));
     //元素之母掉落物
     public static final Item VASTNESS_ZEPHYR = registerItem("vastness_zephyr",new Item(new Item.Settings().fireproof()));

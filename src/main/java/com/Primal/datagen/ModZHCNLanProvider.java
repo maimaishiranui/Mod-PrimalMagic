@@ -43,6 +43,7 @@ public class ModZHCNLanProvider extends FabricLanguageProvider {
         translationBuilder.add(ModItems.VASTNESS_STREAM, "虚空之水");
         translationBuilder.add(ModItems.SOUL_OF_MINGYUAN, "冥渊之魂");
         translationBuilder.add(ModItems.ELEMENTAL_MASTERMIND, "元素之母");
+        translationBuilder.add(ModItems.ANCIENT_KEY,"远古密钥");
 
         // --- 4. 元素符文 (Talisman) ---
         translationBuilder.add(ModItems.BREEZE_TALISMAN, "微风护符");

@@ -1,6 +1,7 @@
 package com.Primal.datagen;
 
 import com.Primal.block.ModBlocks;
+import com.Primal.item.AncientKeyItem;
 import com.Primal.item.ModItems;
 import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator;
 import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
@@ -29,6 +30,7 @@ public class ModENUSLanProvider extends FabricLanguageProvider {
         translationBuilder.add(ModItems.VASTNESS_THUNDERCLAP ,"Vastness Thunderclap");
         translationBuilder.add(ModItems.VASTNESS_ZEPHYR ,"Vastness Zephyr");
         translationBuilder.add(ModItems.VASTNESS_STREAM,"Vastness Stream");
+        translationBuilder.add(ModItems.ANCIENT_KEY,"Ancient Key");
 
         //Boss掉落物--特级Boss类
         translationBuilder.add(ModItems.SOUL_OF_MINGYUAN,"Soul of Mingyuan");
