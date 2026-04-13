@@ -14,7 +14,7 @@ public class ModEntities {
             Identifier.of(PrimalMagic.MOD_ID, "mingyuan"),
             EntityType.Builder.create(MingYuanEntity::new, SpawnGroup.MONSTER)
                     // 推荐根据模型调大：宽 2.5 格，高 4.5 格 (根据实际体型微调)
-                    .dimensions(2.5f, 4.5f)
+                    .dimensions(1.4f, 2.5f)
                     .build()
     );
 
