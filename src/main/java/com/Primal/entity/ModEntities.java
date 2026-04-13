@@ -13,8 +13,8 @@ public class ModEntities {
             Registries.ENTITY_TYPE,
             Identifier.of(PrimalMagic.MOD_ID, "mingyuan"),
             EntityType.Builder.create(MingYuanEntity::new, SpawnGroup.MONSTER)
-                    // 设置 Boss 的碰撞箱大小 (宽 1.0, 高 2.0，可根据你的模型自行修改)
-                    .dimensions(1.0f, 2.0f)
+                    // 推荐根据模型调大：宽 2.5 格，高 4.5 格 (根据实际体型微调)
+                    .dimensions(2.5f, 4.5f)
                     .build()
     );
 
