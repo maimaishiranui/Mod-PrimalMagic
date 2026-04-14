@@ -13,7 +13,7 @@ public class MingYuanRenderer extends GeoEntityRenderer<MingYuanEntity> {
         // 如果它现在只有 1/4 格大，你可以把它放大 4 倍甚至更多
         // 第一个参数是 X，第二个是 Y，第三个是 Z
         // 建议试一下 3.0f 或 5.0f，直到它看起来像个 Boss
-        this.withScale(2.0f);
+        this.withScale(1.5f);
     }
 
     // 可选：如果你还想微调碰撞箱的大小（让玩家更难打中或更容易打中）

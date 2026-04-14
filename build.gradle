@@ -41,6 +41,28 @@ dependencies {
 	// 3. Fabric API
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
+
+
+loom {
+	runs {
+		client {
+			client()
+			configName = "Minecraft Client"
+			ideConfigGenerated = true
+			runDir = "run"
+			// 设置最大内存为 4G，初始内存为 2G
+			vmArg "-Xmx6G"
+			vmArg "-Xms2G"
+		}
+		server {
+			server()
+			configName = "Minecraft Server"
+			ideConfigGenerated = true
+			runDir = "run"
+		}
+	}
+}
+
 processResources {
 	inputs.property "version", project.version
 
