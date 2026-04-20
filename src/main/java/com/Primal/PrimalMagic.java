@@ -137,6 +137,9 @@ public class PrimalMagic implements ModInitializer {
 		ModEntities.register();
 		FabricDefaultAttributeRegistry.register(ModEntities.MINGYUAN, MingYuanEntity.setAttributes());
 
+		//-------------------7.地形结构注册 -------------------
+
+
 		LOGGER.info("Primal Magic Initialized with Talisman Drops!");
 	}
 }

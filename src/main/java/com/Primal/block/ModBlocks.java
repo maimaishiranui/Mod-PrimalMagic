@@ -18,10 +18,13 @@ public class ModBlocks {
 
     public static final Block ILLUSIONARY_BLOCK = register("illusionary_block",new Block(AbstractBlock.Settings.create().requiresTool().strength(66.0f,45.5f)));
 
-
     public static final Block MAGIC_BINDING_TABLE = register("magic_binding_table",
             new MagicBindingTableBlock(AbstractBlock.Settings.create().mapColor(MapColor.BLACK).requiresTool().strength(2.5f, 2.5f).nonOpaque()));
 
+    //注册mingyuan核心的方块
+
+    public static final Block MINGYUAN_CORE = register("mingyuan_core",
+            new MingYuanCoreBlock(AbstractBlock.Settings.create().strength(-1.0f, 3600000.0f))); // 基岩硬度
 
     public static  void registerBlockItem(String id,Block block){
         Item item = Registry.register(Registries.ITEM,Identifier.of(PrimalMagic.MOD_ID,id),new BlockItem(block,new Item.Settings()));

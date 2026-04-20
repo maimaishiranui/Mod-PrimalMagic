@@ -19,7 +19,7 @@ public class ModModelsProvider extends FabricModelProvider {
         generator.registerSimpleCubeAll(ModBlocks.REFINING_STONE_BLOCK);
         generator.registerSimpleCubeAll(ModBlocks.ILLUSIONARY_BLOCK);
         generator.registerSimpleCubeAll(ModBlocks.SPIRITUAL_MEDIUM_STONE_BLOCK);
-
+        generator.registerSimpleCubeAll(ModBlocks.MINGYUAN_CORE);
 
         // --- 2. 魔法绑定台（自定义多面贴图） ---
         TextureMap textures = new TextureMap()

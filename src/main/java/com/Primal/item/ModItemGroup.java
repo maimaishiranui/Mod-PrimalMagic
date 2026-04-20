@@ -78,6 +78,7 @@ public class ModItemGroup {
                         entries.add(ModBlocks.MAGIC_BINDING_TABLE);
                         entries.add(ModBlocks.ILLUSIONARY_BLOCK);
                         entries.add(ModBlocks.REFINING_STONE_BLOCK);
+                        entries.add(ModBlocks.MINGYUAN_CORE);
 
                         //Boss掉落物的加入物品栏的注册
                         entries.add(ModItems.SOUL_OF_MINGYUAN);

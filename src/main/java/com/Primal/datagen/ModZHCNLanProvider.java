@@ -19,7 +19,7 @@ public class ModZHCNLanProvider extends FabricLanguageProvider {
         translationBuilder.add(ModBlocks.ILLUSIONARY_BLOCK, "幻化石方块");
         translationBuilder.add(ModBlocks.REFINING_STONE_BLOCK, "洗练石方块");
         translationBuilder.add(ModBlocks.SPIRITUAL_MEDIUM_STONE_BLOCK, "灵媒石方块");
-
+        translationBuilder.add(ModBlocks.MINGYUAN_CORE, "冥渊核心");
 
         // --- 2. 基础物品 ---
         translationBuilder.add(ModItems.SCHOLAR_SCEPTRE, "学识权杖");
