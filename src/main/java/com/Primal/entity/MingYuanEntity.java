@@ -74,6 +74,16 @@ public class MingYuanEntity extends HostileEntity implements GeoEntity {
         this.targetSelector.add(1, new ActiveTargetGoal<>(this, PlayerEntity.class, true));
     }
 
+    // 核心修改：让 Boss 免疫火焰、熔岩和火球伤害
+    @Override
+    public boolean isInvulnerableTo(DamageSource damageSource) {
+        if (damageSource.isIn(net.minecraft.registry.tag.DamageTypeTags.IS_FIRE)) {
+            return true;
+        }
+        return super.isInvulnerableTo(damageSource);
+    }
+
+
     @Override
     public void tick() {
         super.tick();
@@ -248,3 +258,4 @@ public class MingYuanEntity extends HostileEntity implements GeoEntity {
         }
     }
 }
+

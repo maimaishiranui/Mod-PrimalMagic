@@ -1,37 +1,44 @@
 package com.Primal.block;
 
 import com.Primal.PrimalMagic;
-import com.Primal.entity.ModEntities;
-import com.Primal.entity.MingYuanEntity;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.network.packet.s2c.play.TitleS2CPacket;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.structure.StructurePlacementData;
-import net.minecraft.structure.StructureTemplate;
-import net.minecraft.structure.StructureTemplateManager;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3i;
-import net.minecraft.world.Heightmap;
 import net.minecraft.world.World;
-import net.minecraft.util.math.random.Random;
-
-import java.util.Optional;
 
 public class MingYuanCoreBlock extends Block {
     public MingYuanCoreBlock(Settings settings) {
         super(settings);
+    }
+
+    // 当区块加载时，核心方块会再次向主类报到
+    @Override
+    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
+        super.onBlockAdded(state, world, pos, oldState, notify);
+        if (!world.isClient) {
+            com.Primal.PrimalMagic.PALACE_CORE_POS = pos;
+        }
+    }
+
+    // 增加一个加载逻辑，确保服务器重启后依然能定位
+    public boolean onSyncedBlockEvent(BlockState state, World world, BlockPos pos, int id, int data) {
+        com.Primal.PrimalMagic.PALACE_CORE_POS = pos;
+        return false;
     }
 
     @Override
@@ -49,77 +56,63 @@ public class MingYuanCoreBlock extends Block {
     private void triggerSummonRitual(World world, BlockPos pos, PlayerEntity player) {
         if (world.isClient() || !(world instanceof ServerWorld serverWorld)) return;
 
+        // 0. 状态锁定
+        com.Primal.PrimalMagic.IS_SUMMONING = true;
+        com.Primal.PrimalMagic.PALACE_CORE_POS = null;
+
+        // 1. 【终极强制击飞】
+        if (player != null && !player.isCreative() && player instanceof ServerPlayerEntity sp) {
+            // A. 预先给予无敌和抗性，防止任何意外
+            sp.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE, 400, 4, false, false));
+
+            // B. 计算击飞向量 (以核心为圆心向外)
+            double dx = sp.getX() - (pos.getX() + 0.5);
+            double dz = sp.getZ() - (pos.getZ() + 0.5);
+            // 如果玩家正好站在方块中心导致 dx/dz 为 0，给予一个默认方向
+            if (Math.abs(dx) < 0.1 && Math.abs(dz) < 0.1) { dx = 1.0; }
+
+            // 极其强劲的速度：水平 10.0，垂直 2.0
+            Vec3d launchVec = new Vec3d(dx, 0, dz).normalize().multiply(10.0);
+
+            // C. 【关键修复：坐标强制重置】
+            // 在施加推力前，瞬间将玩家坐标强制提升 1.5 格。
+            // 这一步是为了让玩家彻底离开地面的“摩擦力判定区”和“卡块判定区”。
+            sp.requestTeleport(sp.getX(), sp.getY() + 1.5, sp.getZ());
+
+            // D. 立即施加爆发速度
+            sp.setVelocity(launchVec.x, 2.0, launchVec.z);
+            sp.velocityModified = true;
+
+            // E. 【最关键：立即同步】
+            // 强制告诉客户端：你的坐标变了，速度也变了！
+            sp.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket(sp));
+
+            // F. 仪式文字
+            sp.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.TitleS2CPacket(Text.literal("§0§l万 象 湮 灭...")));
+        }
+
+        // 2. 仪式标记逻辑 (2秒后生成建筑)
+        net.minecraft.entity.MarkerEntity ritualMarker = EntityType.MARKER.create(serverWorld);
+        if (ritualMarker != null) {
+            ritualMarker.setPosition(pos.toCenterPos());
+            serverWorld.spawnEntity(ritualMarker);
+            // 延迟 40 刻 (2秒)
+            PrimalMagic.RITUAL_TASKS.put(world.getTime() + 40, pos);
+        }
+
+        // 3. 核心方块瞬间消失，防止任何碰撞残留
         serverWorld.setBlockState(pos, Blocks.AIR.getDefaultState(), 3);
 
-        // 1. 【超强弹射逻辑】将玩家弹射出 100 格左右
-        if (player != null && !player.isCreative()) {
-            // 计算从核心指向玩家的水平向量
-            double dx = player.getX() - (pos.getX() + 0.5);
-            double dz = player.getZ() - (pos.getZ() + 0.5);
-            Vec3d launchVec = new Vec3d(dx, 0, dz).normalize().multiply(6.5); // 6.5 的水平初速度非常快
-
-            // 给予玩家一个强大的斜向上抛力
-            player.setVelocity(launchVec.x, 1.5, launchVec.z); // Y轴 1.5 确保玩家飞得很高
-            player.velocityModified = true;
-
-            // 为了不让玩家直接摔死，给予 15 秒的缓降和极高抗性
-            player.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE, 300, 4, false, false));
-            player.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOW_FALLING, 200, 0, false, false));
-
-            player.sendMessage(Text.literal("§c§l一股未知的虚空洪流将你震飞！"), true);
-        }
-
-        // 2. 特效与音效
-        serverWorld.spawnParticles(ParticleTypes.EXPLOSION_EMITTER, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 10, 1, 1, 1, 0.1);
-        serverWorld.playSound(null, pos, SoundEvents.ENTITY_GENERIC_EXPLODE.value(), SoundCategory.BLOCKS, 5.0f, 0.5f);
-
-        // 3. 加载并生成 NBT (下沉 2 格)
-        Identifier nbtId = Identifier.of(PrimalMagic.MOD_ID, "mingyuan_palace");
-        StructureTemplateManager templateManager = serverWorld.getStructureTemplateManager();
-        Optional<StructureTemplate> optionalTemplate = templateManager.getTemplate(nbtId);
-
-        if (optionalTemplate.isPresent()) {
-            StructureTemplate template = optionalTemplate.get();
-            Vec3i size = template.getSize();
-
-            // --- 关键点：pos.add(..., -2, ...) 让建筑整体下沉 2 格 ---
-            BlockPos placePos = pos.add(-size.getX() / 2, -2, -size.getZ() / 2);
-
-            StructurePlacementData placementData = new StructurePlacementData();
-            template.place(serverWorld, placePos, placePos, placementData, serverWorld.random, 2);
-
-            // 4. 召唤 Boss (同步下沉)
-            MingYuanEntity boss = ModEntities.MINGYUAN.create(serverWorld);
-            if (boss != null) {
-                // 这里的 Y 坐标改为 pos.getY() - 1，这样它会正好刷在大殿沉下去后的地板上
-                boss.refreshPositionAndAngles(pos.getX() + 0.5, pos.getY() - 1.0, pos.getZ() + 0.5, 0, 0);
-                serverWorld.spawnEntity(boss);
-            }
-
-            // 5. 污染逻辑
-            corruptTerrain(serverWorld, pos);
-
-        } else {
-            PrimalMagic.LOGGER.error("无法加载 NBT 建筑：找不到 " + nbtId);
-        }
+        // 播放震耳欲聋的声波
+        serverWorld.playSound(null, pos, SoundEvents.ENTITY_WARDEN_SONIC_BOOM, SoundCategory.BLOCKS, 2.0f, 0.5f);
     }
 
-    private void corruptTerrain(ServerWorld world, BlockPos center) {
-        Random random = world.getRandom();
-        int radius = 50;
-        for (int i = 0; i < 2000; i++) {
-            int rx = random.nextInt(radius * 2) - radius;
-            int rz = random.nextInt(radius * 2) - radius;
-            if (rx * rx + rz * rz <= radius * radius) {
-                BlockPos surfacePos = world.getTopPosition(Heightmap.Type.WORLD_SURFACE, center.add(rx, 0, rz)).down();
-                if (world.getBlockState(surfacePos).isOf(Blocks.SAND) || world.getBlockState(surfacePos).isOf(Blocks.SANDSTONE)) {
-                    if (random.nextBoolean()) {
-                        world.setBlockState(surfacePos, Blocks.RED_NETHER_BRICKS.getDefaultState(), 3);
-                    } else {
-                        world.setBlockState(surfacePos, Blocks.NETHER_WART_BLOCK.getDefaultState(), 3);
-                    }
-                }
-            }
-        }
+    private void startDelayedSummon(ServerWorld world, BlockPos pos, long time) {
+        // 利用 1.21 的服务器任务调度系统
+        world.getServer().execute(() -> {
+            // 这里我们改用一种更简单的方式：利用 Marker 的 tick 或者主类循环
+            // 为了保证 100% 成功，我们将具体的生成逻辑写在一个辅助方法里，并在主类调用。
+            PrimalMagic.RITUAL_TASKS.put(time, pos);
+        });
     }
 }

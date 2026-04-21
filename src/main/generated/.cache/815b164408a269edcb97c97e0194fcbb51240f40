@@ -1,4 +1,4 @@
-// 1.21	2026-04-21T09:48:37.3929462	primalmagic/Model Definitions
+// 1.21	2026-04-21T17:09:28.2733887	primalmagic/Model Definitions
 11f48ccdc0ee9e6bd74f88967b81fb19e44fc2cd assets\primalmagic\models\item\scholar_sceptre.json
 680f88993abccf6e925826a8ae9324fabac134e8 assets\primalmagic\models\block\refining_stone_block.json
 afcfa62ccfc5159f5e88cbaa91450d521c163d6d assets\primalmagic\models\item\rock_talisman.json
@@ -6,8 +6,8 @@ afcfa62ccfc5159f5e88cbaa91450d521c163d6d assets\primalmagic\models\item\rock_tal
 3f2a58c28d94906fa6e53e130dd21f6747e85da3 assets\primalmagic\models\item\vastness_glaciate.json
 e0df7822b9204e83eba64671b13c576ec5f62de5 assets\primalmagic\models\item\breeze_talisman.json
 a11b720491b2606b5645e031b03d3b99554ebf4b assets\primalmagic\models\item\refining_stone.json
-9c3396b6c4dd7b34bd46fa80720dc2102a3ed56a assets\primalmagic\blockstates\mingyuan_core.json
 6f730a1d995269593884e0f702df697b8a8e201d assets\primalmagic\blockstates\illusionary_block.json
+9c3396b6c4dd7b34bd46fa80720dc2102a3ed56a assets\primalmagic\blockstates\mingyuan_core.json
 f86f2d4471303db3ac78d46c35ebbe2ad7e8a3d9 assets\primalmagic\models\item\refining_stone_block.json
 3737a8a7c9319f0ea81019875a3aee696a898ed2 assets\primalmagic\models\item\pastoral_sceptre.json
 ff69b2a0737be902638492463cc49275d35c6198 assets\primalmagic\models\item\mingyuan_core.json
@@ -16,8 +16,8 @@ c09332dfde7326c9a56ec1ce9451b5d3f4abb351 assets\primalmagic\models\item\original
 e4719364645f50c84bf9b35dc5075ac2929d73df assets\primalmagic\models\item\flame_talisman.json
 8fa31a5d99eac5d553c1d5afaf259375349a9065 assets\primalmagic\models\item\spiritual_medium_stone.json
 18267a43140edf478007d89e0372c5848406592b assets\primalmagic\models\item\magic_introduction.json
-acdd2b239b2f6b2745fc931d898c3851600976e8 assets\primalmagic\models\block\mingyuan_core.json
 2059527d1565f0d35dac67c841d89b280de875cd assets\primalmagic\blockstates\spiritual_medium_stone_block.json
+acdd2b239b2f6b2745fc931d898c3851600976e8 assets\primalmagic\models\block\mingyuan_core.json
 cc672830e1344d1d4408c29623c7e558847a78b6 assets\primalmagic\models\item\thunderclap_talisman.json
 4855e5f107727a506bd48aab9fe0c9c6e52f3c23 assets\primalmagic\models\item\magic_binding_table.json
 cdea3c12748f8587d38b6ae5f3dde2be313e302c assets\primalmagic\models\block\magic_binding_table.json

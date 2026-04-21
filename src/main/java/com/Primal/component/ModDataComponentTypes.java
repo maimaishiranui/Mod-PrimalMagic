@@ -7,6 +7,8 @@ import net.minecraft.network.codec.PacketCodecs;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
+
 import java.util.function.UnaryOperator;
 
 public class ModDataComponentTypes {
@@ -31,6 +33,8 @@ public class ModDataComponentTypes {
 
     public static final ComponentType<Integer> BARRAGE_TICKS_LEFT = register("barrage_ticks_left",
             builder -> builder.codec(Codec.INT).packetCodec(PacketCodecs.VAR_INT));
+
+
 
     // --- 新增：风系技能 2 的固定中心坐标组件 ---
     // 我们用 Double 类型来存储释放技能那一刻的精准位置
@@ -82,6 +86,12 @@ public class ModDataComponentTypes {
     // 在 ModDataComponentTypes.java 中，将之前的 ROCK_RECHARGE_START_TIME 修改（或新增）为：
 // 记录距离下一次充能还剩多少刻 (默认 200 刻 = 10秒)
     public static final ComponentType<Integer> ROCK_RECHARGE_TICKS = register("rock_recharge_ticks", builder -> builder.codec(Codec.INT).packetCodec(PacketCodecs.VAR_INT));
+
+//用于记录mingyuan核心的时间
+// 在 ModDataComponentTypes.java 中添加
+public static BlockPos palaceCorePos = null; // 简单全局变量，用于唯一建筑定位
+
+
 
     public static void registerDataComponentTypes() {
         PrimalMagic.LOGGER.info("Registering Data Component Types for " + PrimalMagic.MOD_ID);
