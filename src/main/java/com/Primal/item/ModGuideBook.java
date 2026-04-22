@@ -16,7 +16,7 @@ public class ModGuideBook {
         List<RawFilteredPair<Text>> pages = new ArrayList<>();
 
         // --- 第 1 页：欢迎 ---
-        pages.add(RawFilteredPair.of(Text.literal("§1§l原初魔法：向导§r\n\n欢迎！这本书将指引你从凡人走向原初法师之路。\n\n作者：Mariah shiranui\n版本：0.1a-1.21")));
+        pages.add(RawFilteredPair.of(Text.literal("§1§l原初魔法：向导§r\n\n欢迎！这本书将指引你从凡人走向原初法师之路。\n\n作者：Mariah shiranui\n版本：0.2a-1.21")));
 
         // --- 第 2 页：核心方块：魔法绑定台 ---
         pages.add(RawFilteredPair.of(Text.literal("§n§0核心方块：§r\n\n§l魔法绑定台§r\n[石][石][石]\n[石][洗][石]\n[石][石][石]\n(洗=洗练石)\n\n这是所有附魔与强化的基础。")));
