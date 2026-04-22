@@ -1,1 +1,9 @@
-(empty)
+```
+.gradle/
+build/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+```
