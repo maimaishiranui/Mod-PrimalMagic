@@ -1,0 +1,14 @@
+{
+  "structures": [
+    {
+      "structure": "primalmagic:mirage_portal_ruins",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 40,
+    "separation": 15,
+    "salt": 87654321
+  }
+}

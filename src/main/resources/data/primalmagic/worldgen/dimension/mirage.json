@@ -1,0 +1,17 @@
+{
+  "type": "primalmagic:mirage",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "layers":[
+        {
+          "block": "minecraft:air",
+          "height": 1
+        }
+      ],
+      "biome": "primalmagic:mirage_biome",
+      "lakes": false,
+      "features": false
+    }
+  }
+}

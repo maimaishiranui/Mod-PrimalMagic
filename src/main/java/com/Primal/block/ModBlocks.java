@@ -26,6 +26,18 @@ public class ModBlocks {
     public static final Block MINGYUAN_CORE = register("mingyuan_core",
             new MingYuanCoreBlock(AbstractBlock.Settings.create().strength(-1.0f, 3600000.0f))); // 基岩硬度
 
+    //注册Mirage的通道方块
+    // 在 ModBlocks 类中添加
+    public static final Block MIRAGE_PORTAL = register("mirage_portal",
+            new com.Primal.block.MiragePortalBlock(net.minecraft.block.AbstractBlock.Settings.create()
+                    .noCollision()      // 玩家可以穿过
+                    .nonOpaque()       // 透明
+                    .strength(-1.0f)   // 不可破坏
+                    .luminance(state -> 15))); // 发光强度最大
+
+
+    //注册方法
+
     public static  void registerBlockItem(String id,Block block){
         Item item = Registry.register(Registries.ITEM,Identifier.of(PrimalMagic.MOD_ID,id),new BlockItem(block,new Item.Settings()));
             if(item instanceof BlockItem){

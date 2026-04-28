@@ -26,6 +26,7 @@ import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.minecraft.block.Blocks;
+import net.minecraft.entity.MarkerEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.item.ItemStack;
@@ -48,6 +49,7 @@ import net.minecraft.world.gen.GenerationStep;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Optional;
 
 public class PrimalMagic implements ModInitializer {
@@ -136,13 +138,13 @@ public class PrimalMagic implements ModInitializer {
 				RITUAL_TASKS.remove(currentTime);
 			}
 
-					// 2. 增强版屏幕标题警告逻辑
-					if (currentTime % 20 == 0) { // 每秒检查一次
-						for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-							// 如果变量丢失，尝试从玩家周围搜寻核心（保险措施）
-							if (PALACE_CORE_POS == null) {
+			// 2. 增强版屏幕标题警告逻辑
+			if (currentTime % 20 == 0) { // 每秒检查一次
+				for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+					// 如果变量丢失，尝试从玩家周围搜寻核心（保险措施）
+					if (PALACE_CORE_POS == null) {
 								// 这个搜寻范围不要太大，防止卡顿
-								BlockPos.findClosest(player.getBlockPos(), 100, 100, pos ->
+						BlockPos.findClosest(player.getBlockPos(), 100, 100, pos ->
 												player.getWorld().getBlockState(pos).isOf(com.Primal.block.ModBlocks.MINGYUAN_CORE))
 										.ifPresent(pos -> PALACE_CORE_POS = pos);
 							}
@@ -164,8 +166,6 @@ public class PrimalMagic implements ModInitializer {
 							}
 						}
 					}
-
-
 
 
 			//-----------法杖类的相关计时组件-------------------
@@ -205,7 +205,41 @@ public class PrimalMagic implements ModInitializer {
 		FabricDefaultAttributeRegistry.register(ModEntities.MINGYUAN, MingYuanEntity.setAttributes());
 
 		//-------------------7.地形结构注册 -------------------
+		//时刻监听循环
+		ServerTickEvents.END_SERVER_TICK.register(server -> {
+			ServerWorld world = server.getOverworld();
+			long currentTime = world.getTime();
 
+			// 1. 处理所有延时任务 (包含建筑生成和门户激活)
+			if (RITUAL_TASKS.containsKey(currentTime)) {
+				BlockPos pos = RITUAL_TASKS.get(currentTime);
+
+				// 逻辑判定：如果是核心方块的坐标，执行建筑生成
+				// 如果是遗迹中心的坐标，执行门户激活
+				if (world.isAir(pos)) {
+					activateMiragePortal(world, pos);
+				} else {
+					completePalaceSummon(world, pos);
+				}
+
+				RITUAL_TASKS.remove(currentTime);
+			}
+
+			// 2. 每 0.5 秒检测一次玩家是否拿着钥匙靠近遗迹
+			if (currentTime % 10 == 0) {
+				for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+					if (player.getMainHandStack().isOf(com.Primal.item.ModItems.ANCIENT_KEY)) {
+						BlockPos portalCenter = findNearbyPortalFrame(player);
+						if (portalCenter != null) {
+							// 检查该位置是否已经激活，防止重复触发
+							if (!world.getBlockState(portalCenter).isOf(ModBlocks.MIRAGE_PORTAL)) {
+								startPortalRitual(player, portalCenter);
+							}
+						}
+					}
+				}
+			}
+		});
 
 
 
@@ -259,6 +293,33 @@ public class PrimalMagic implements ModInitializer {
 			}
 		}
 	}
+
+	private void activateMiragePortal(net.minecraft.server.world.ServerWorld world, net.minecraft.util.math.BlockPos center) {
+
+		// 1. 【新增】寻找并销毁飞到门中心的远古之钥
+		java.util.List<net.minecraft.entity.ItemEntity> keys = world.getEntitiesByClass(
+				net.minecraft.entity.ItemEntity.class,
+				new net.minecraft.util.math.Box(center).expand(3.0),
+				e -> e.getStack().isOf(com.Primal.item.ModItems.ANCIENT_KEY)
+		);
+		for (net.minecraft.entity.ItemEntity key : keys) {
+			key.discard(); // 让钥匙实体消失
+		}
+
+		// 2. 填充 3x3 红色传送门方块
+		for (int y = 0; y < 3; y++) {
+			for (int x = -1; x <= 1; x++) {
+				net.minecraft.util.math.BlockPos p = center.add(x, y, 0);
+				if (world.isAir(p)) {
+					world.setBlockState(p, com.Primal.block.ModBlocks.MIRAGE_PORTAL.getDefaultState(), 3);
+				}
+			}
+		}
+
+		// 3. 华丽收尾音效
+		world.playSound(null, center, net.minecraft.sound.SoundEvents.BLOCK_END_PORTAL_SPAWN, net.minecraft.sound.SoundCategory.BLOCKS, 1f, 1f);
+	}
+
 	// 辅助方法：地形污染 (同样挪进 PrimalMagic 类)
 	private void corruptTerrain(ServerWorld world, BlockPos center) {
 		net.minecraft.util.math.random.Random random = world.getRandom();
@@ -279,5 +340,58 @@ public class PrimalMagic implements ModInitializer {
 				}
 			}
 		}
+	}
+
+	public BlockPos findNearbyPortalFrame(ServerPlayerEntity player) {
+		ServerWorld world = player.getServerWorld();
+		// 在玩家周围 10 格内寻找 Marker 实体
+		List<MarkerEntity> markers = world.getEntitiesByClass(
+				net.minecraft.entity.MarkerEntity.class,
+				player.getBoundingBox().expand(10.0),
+				entity -> entity.getCommandTags().contains("primalmagic:portal_marker")
+		);
+
+		if (!markers.isEmpty()) {
+			return markers.get(0).getBlockPos();
+		}
+		return null;
+	}
+
+	private void startPortalRitual(net.minecraft.server.network.ServerPlayerEntity player, net.minecraft.util.math.BlockPos center) {
+		net.minecraft.server.world.ServerWorld world = player.getServerWorld();
+
+		// 1. 消耗钥匙
+		if (!player.isCreative()) {
+			player.getMainHandStack().decrement(1);
+		}
+
+		// 2. 【核心修复】创建一个“掉落物”形式的远古之钥
+		net.minecraft.entity.ItemEntity flyingKey = new net.minecraft.entity.ItemEntity(
+				world,
+				player.getX(), player.getEyeY(), player.getZ(),
+				new net.minecraft.item.ItemStack(com.Primal.item.ModItems.ANCIENT_KEY)
+		);
+
+		// 设置为：无限延迟拾取(玩家捡不起来)、无重力(悬浮)、发光
+		flyingKey.setPickupDelayInfinite();
+		flyingKey.setNoGravity(true);
+		flyingKey.setGlowing(true);
+
+		// 给钥匙一个指向大门中心的“吸引力”(速度)
+		// 0.05 的系数会让它刚好在 2 秒左右慢悠悠地飘到中心点
+		net.minecraft.util.math.Vec3d targetPos = center.toCenterPos().add(0, 1.5, 0);
+		net.minecraft.util.math.Vec3d velocity = targetPos.subtract(flyingKey.getPos()).multiply(0.05);
+		flyingKey.setVelocity(velocity);
+
+		// 召唤飞行的钥匙
+		world.spawnEntity(flyingKey);
+
+		// 3. 注册 2 秒后的延迟任务 (40刻)
+		long triggerTime = world.getTime() + 40;
+		RITUAL_TASKS.put(triggerTime, center);
+
+		// 4. 视觉特效
+		world.spawnParticles(net.minecraft.particle.ParticleTypes.WITCH, center.getX() + 0.5, center.getY() + 1.5, center.getZ() + 0.5, 50, 0.5, 0.5, 0.5, 0.1);
+		world.playSound(null, center, net.minecraft.sound.SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, net.minecraft.sound.SoundCategory.BLOCKS, 2.0f, 1.0f);
 	}
 }

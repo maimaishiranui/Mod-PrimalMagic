@@ -1,0 +1,50 @@
+/give Player904 minecraft:structure_block
+/locate structure primalmagic:mingyuan_palace
+/tp -10912 100 7136
+/kill @e[type!=player]
+/kill @e[type=!player]
+/locate structure primalmagic:mingyuan_palace
+/tp 3440 100 3824
+/give Player674 minecraft:structure_block
+/effect give Player674 minecraft:night_vision infinite
+/locate structure primalmagic:mingyuan_palace
+/tp -
+/tp Player694 -5920 100 2112
+/locate structure primalmagic:mingyuan_palace
+/tp Player321 -7376 100 2000
+/locate structure primalmagic:mingyuan_palace
+/tp Player251 -3088 100 3536
+/locate structure primalmagic:mingyuan_palace
+/tp Player981 -7696 100 4960
+/effect give Player981 minecraft:resistance infinite
+/effect give Player981 minecraft:resistance infinite 5
+/gamemode survival Player981
+/gamemode creative Player981
+/locate structure primalmagic:mingyuan_palace
+/tp Player303 -4656 100 6860
+/gamemode survival Player303
+/locate structure primalmagic:mingyuan_palace
+/tp Player299 -912 100 -2620
+/tp -912 100 -2720
+/locate structure primalmagic:mingyuan_palace
+/tp Player983 -5680 100 -3032
+/tp Player983 -5680 100 -4132
+/effect give Player983 minecraft:resistance infinite 5
+/gamemode survival Player983
+/locate structure primalmagic:mingyuan_palace
+/tp Player105 5328 100 -6012
+/locate structure primalmagic:mingyuan_palace
+/tp Player942 -7600 100 -7660
+/locate structure primalmagic:mingyuan_palace
+/tp Player639 5008 100 -2556
+/locate structure primalmagic:mingyuan_palace
+/tp Player0 320 100 -3104
+/gamemode survival Player0
+/locate structure primalmagic:mingyuan_palace
+/tp Player936 1920 100 1516
+/gamemode survival Player936
+/locate structure primalmagic:mingyuan_palace
+/locate structure primalmagic:mirage_portal_ruins
+/tp Player973 -368 100 -416
+/give Player973 primalmagic:ancient_key
+/tp Player973 -368 100 -416
